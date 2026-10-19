@@ -12,6 +12,7 @@ env:
   SCONS_FLAGS: >-
     dev_mode=yes
     module_text_server_fb_enabled=yes
+    module_lua_enabled=yes
 
 jobs:
   build-android:
