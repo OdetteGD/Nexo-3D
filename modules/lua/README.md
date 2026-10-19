@@ -16,6 +16,7 @@ Nexo-3D vendors **Lua 5.4.8** under `thirdparty/lua` (MIT license), built throug
 - `Nexo.scene.add_child("res://scene.tscn")`: instantiate a PackedScene as a child of the selected node.
 - `Nexo.scene.change("res://scene.tscn")`: request a change to the active SceneTree scene.
 - Lua editor syntax highlighter for keywords, strings, comments, numbers, built-ins, and function calls.
+- Native `ScriptInstance` method discovery for user-defined top-level Lua `function name(...)` declarations, including method argument metadata exposed to Godot.
 
 ## Pure Lua scene setup
 
