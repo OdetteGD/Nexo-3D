@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  lua_syntax_highlighter.cpp                                          */
+/*  lua_syntax_highlighter.cpp                                            */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
+
 #include "lua_syntax_highlighter.h"
 
 #include "core/templates/hash_set.h"
@@ -108,9 +109,7 @@ Dictionary LuaSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_line) 
 		}
 		if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_') {
 			const int start = i++;
-			while (i < length && ((line[i] >= 'a' && line[i] <= 'z') ||
-					(line[i] >= 'A' && line[i] <= 'Z') ||
-					(line[i] >= '0' && line[i] <= '9') || line[i] == '_')) {
+			while (i < length && ((line[i] >= 'a' && line[i] <= 'z') || (line[i] >= 'A' && line[i] <= 'Z') || (line[i] >= '0' && line[i] <= '9') || line[i] == '_')) {
 				i++;
 			}
 			const String word = line.substr(start, i - start);
