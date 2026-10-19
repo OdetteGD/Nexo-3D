@@ -28,7 +28,7 @@ int main(void) {
         return 3;
     }
     const char *diagnostic = lua_tostring(state, -1);
-    if (diagnostic == NULL || strstr(diagnostic, "syntax") == NULL) {
+    if (diagnostic == NULL || strstr(diagnostic, "invalid.lua:1:") == NULL) {
         fprintf(stderr, "missing syntax diagnostic: %s\n", diagnostic ? diagnostic : "(null)");
         lua_close(state);
         return 4;
