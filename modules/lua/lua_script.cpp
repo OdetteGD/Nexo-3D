@@ -191,6 +191,15 @@ bool LuaScriptInstance::has_method(const StringName &p_method) const {
 	return !script.is_null() && script->has_method(p_method);
 }
 
+int LuaScriptInstance::get_method_argument_count(const StringName &p_method, bool *r_is_valid) const {
+	if (script.is_null() || !script->has_method(p_method)) {
+		if (r_is_valid) *r_is_valid = false;
+		return 0;
+	}
+	if (r_is_valid) *r_is_valid = true;
+	return script->get_method_info(p_method).arguments.size();
+}
+
 Variant LuaScriptInstance::callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
 	r_error.error = Callable::CallError::CALL_OK;
 	if (!loaded || runtime.is_null()) return Variant();
