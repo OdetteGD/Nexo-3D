@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  lua_script_runner.h                                                         */
+/*  lua_script_runner.h                                                   */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -31,6 +31,7 @@
 #pragma once
 
 #include "lua_runtime.h"
+
 #include "scene/main/node.h"
 
 class LuaScriptRunner : public Node {
