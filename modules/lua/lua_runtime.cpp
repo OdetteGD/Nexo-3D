@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  lua_runtime.cpp                                                             */
+/*  lua_runtime.cpp                                                       */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -152,7 +152,9 @@ int _nexo_add_scene(lua_State *p_state) {
 		return luaL_error(p_state, "Nexo.scene.add_child requires a selected parent node");
 	}
 	Ref<PackedScene> packed = ResourceLoader::load(String::utf8(raw_path), "PackedScene");
-	if (packed.is_null()) return luaL_error(p_state, "Nexo.scene.add_child could not load PackedScene");
+	if (packed.is_null()) {
+		return luaL_error(p_state, "Nexo.scene.add_child could not load PackedScene");
+	}
 	Node *instance = packed->instantiate();
 	if (!instance) {
 		return luaL_error(p_state, "Nexo.scene.add_child failed to instantiate scene");
@@ -171,7 +173,9 @@ int _nexo_change_scene(lua_State *p_state) {
 		return luaL_error(p_state, "Nexo.scene.change requires an active SceneTree");
 	}
 	Ref<PackedScene> packed = ResourceLoader::load(String::utf8(raw_path), "PackedScene");
-	if (packed.is_null()) return luaL_error(p_state, "Nexo.scene.change could not load PackedScene");
+	if (packed.is_null()) {
+		return luaL_error(p_state, "Nexo.scene.change could not load PackedScene");
+	}
 	const Error err = tree->change_scene_to_packed(packed);
 	if (err != OK) {
 		return luaL_error(p_state, "Nexo.scene.change failed with error %d", (int)err);
@@ -183,20 +187,33 @@ int _nexo_signal_emit(lua_State *p_state) {
 	LuaRuntime *runtime = _runtime(p_state);
 	Node *node = runtime ? runtime->get_target_node() : nullptr;
 	const char *raw_name = luaL_checkstring(p_state, 1);
-	if (!node) return luaL_error(p_state, "Nexo.signal.emit requires a live target Node");
+	if (!node) {
+		return luaL_error(p_state, "Nexo.signal.emit requires a live target Node");
+	}
 	const StringName signal_name(String::utf8(raw_name));
-	if (!node->has_signal(signal_name)) return luaL_error(p_state, "Nexo.signal.emit: signal is not declared on the target Node");
+	if (!node->has_signal(signal_name)) {
+		return luaL_error(p_state, "Nexo.signal.emit: signal is not declared on the target Node");
+	}
 	Array args;
 	args.push_back(signal_name);
 	for (int i = 2; i <= lua_gettop(p_state); i++) {
 		switch (lua_type(p_state, i)) {
-			case LUA_TNIL: args.push_back(Variant()); break;
-			case LUA_TBOOLEAN: args.push_back(lua_toboolean(p_state, i) != 0); break;
-			case LUA_TNUMBER:
-				if (lua_isinteger(p_state, i)) args.push_back((int64_t)lua_tointeger(p_state, i));
-				else args.push_back((double)lua_tonumber(p_state, i));
+			case LUA_TNIL:
+				args.push_back(Variant());
 				break;
-			case LUA_TSTRING: args.push_back(String::utf8(lua_tostring(p_state, i))); break;
+			case LUA_TBOOLEAN:
+				args.push_back(lua_toboolean(p_state, i) != 0);
+				break;
+			case LUA_TNUMBER:
+				if (lua_isinteger(p_state, i)) {
+					args.push_back((int64_t)lua_tointeger(p_state, i));
+				} else {
+					args.push_back((double)lua_tonumber(p_state, i));
+				}
+				break;
+			case LUA_TSTRING:
+				args.push_back(String::utf8(lua_tostring(p_state, i)));
+				break;
 			case LUA_TTABLE: {
 				const int table = lua_absindex(p_state, i);
 				lua_getfield(p_state, table, "x");
@@ -211,11 +228,17 @@ int _nexo_signal_emit(lua_State *p_state) {
 				const bool has_z = !lua_isnil(p_state, -1);
 				const double z = lua_tonumber(p_state, -1);
 				lua_pop(p_state, 1);
-				if (has_x && has_y && has_z) args.push_back(Vector3((real_t)x, (real_t)y, (real_t)z));
-				else if (has_x && has_y) args.push_back(Vector2((real_t)x, (real_t)y));
-				else args.push_back(Variant());
+				if (has_x && has_y && has_z) {
+					args.push_back(Vector3((real_t)x, (real_t)y, (real_t)z));
+				} else if (has_x && has_y) {
+					args.push_back(Vector2((real_t)x, (real_t)y));
+				} else {
+					args.push_back(Variant());
+				}
 			} break;
-			default: args.push_back(Variant()); break;
+			default:
+				args.push_back(Variant());
+				break;
 		}
 	}
 	const Variant emitted = node->callv("emit_signal", args);
@@ -410,7 +433,6 @@ Dictionary LuaRuntime::execute_string(const String &p_source, const String &p_so
 	return _result(true);
 }
 
-
 Dictionary LuaRuntime::check_file(const String &p_path) {
 	Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ);
 	if (file.is_null()) {
@@ -428,13 +450,19 @@ Dictionary LuaRuntime::execute_file(const String &p_path) {
 }
 
 static Variant _lua_to_variant(lua_State *p_state, int p_index, int p_depth = 0) {
-	if (p_depth > 16) return Variant();
+	if (p_depth > 16) {
+		return Variant();
+	}
 	const int type = lua_type(p_state, p_index);
 	switch (type) {
-		case LUA_TNIL: return Variant();
-		case LUA_TBOOLEAN: return Variant((bool)(lua_toboolean(p_state, p_index) != 0));
+		case LUA_TNIL:
+			return Variant();
+		case LUA_TBOOLEAN:
+			return Variant((bool)(lua_toboolean(p_state, p_index) != 0));
 		case LUA_TNUMBER:
-			if (lua_isinteger(p_state, p_index)) return Variant((int64_t)lua_tointeger(p_state, p_index));
+			if (lua_isinteger(p_state, p_index)) {
+				return Variant((int64_t)lua_tointeger(p_state, p_index));
+			}
 			return Variant((double)lua_tonumber(p_state, p_index));
 		case LUA_TSTRING: {
 			size_t length = 0;
@@ -459,9 +487,15 @@ static Variant _lua_to_variant(lua_State *p_state, int p_index, int p_depth = 0)
 			const bool has_w = !lua_isnil(p_state, -1);
 			const double w = lua_tonumber(p_state, -1);
 			lua_pop(p_state, 1);
-			if (has_x && has_y && has_z && has_w) return Variant(Vector4((real_t)x, (real_t)y, (real_t)z, (real_t)w));
-			if (has_x && has_y && has_z) return Variant(Vector3((real_t)x, (real_t)y, (real_t)z));
-			if (has_x && has_y) return Variant(Vector2((real_t)x, (real_t)y));
+			if (has_x && has_y && has_z && has_w) {
+				return Variant(Vector4((real_t)x, (real_t)y, (real_t)z, (real_t)w));
+			}
+			if (has_x && has_y && has_z) {
+				return Variant(Vector3((real_t)x, (real_t)y, (real_t)z));
+			}
+			if (has_x && has_y) {
+				return Variant(Vector2((real_t)x, (real_t)y));
+			}
 			lua_getfield(p_state, absolute, "r");
 			const bool has_r = !lua_isnil(p_state, -1);
 			const double red = lua_tonumber(p_state, -1);
@@ -478,7 +512,9 @@ static Variant _lua_to_variant(lua_State *p_state, int p_index, int p_depth = 0)
 			const bool has_a = !lua_isnil(p_state, -1);
 			const double alpha = lua_tonumber(p_state, -1);
 			lua_pop(p_state, 1);
-			if (has_r && has_g && has_b) return Variant(Color((real_t)red, (real_t)green, (real_t)blue, has_a ? (real_t)alpha : 1.0));
+			if (has_r && has_g && has_b) {
+				return Variant(Color((real_t)red, (real_t)green, (real_t)blue, has_a ? (real_t)alpha : 1.0));
+			}
 			Array array;
 			Dictionary dictionary;
 			bool is_array = true;
@@ -486,7 +522,9 @@ static Variant _lua_to_variant(lua_State *p_state, int p_index, int p_depth = 0)
 			lua_pushnil(p_state);
 			while (lua_next(p_state, absolute) != 0) {
 				count++;
-				if (!lua_isinteger(p_state, -2) || lua_tointeger(p_state, -2) < 1) is_array = false;
+				if (!lua_isinteger(p_state, -2) || lua_tointeger(p_state, -2) < 1) {
+					is_array = false;
+				}
 				lua_pop(p_state, 1);
 			}
 			if (is_array) {
@@ -501,12 +539,15 @@ static Variant _lua_to_variant(lua_State *p_state, int p_index, int p_depth = 0)
 			while (lua_next(p_state, absolute) != 0) {
 				Variant key = _lua_to_variant(p_state, -2, p_depth + 1);
 				Variant value = _lua_to_variant(p_state, -1, p_depth + 1);
-				if (key.get_type() != Variant::NIL) dictionary[key] = value;
+				if (key.get_type() != Variant::NIL) {
+					dictionary[key] = value;
+				}
 				lua_pop(p_state, 1);
 			}
 			return Variant(dictionary);
 		}
-		default: return Variant();
+		default:
+			return Variant();
 	}
 }
 
@@ -533,31 +574,44 @@ static void _push_variant_to_lua(lua_State *p_state, const Variant &p_value) {
 		case Variant::VECTOR2I: {
 			Vector2i value = p_value;
 			lua_createtable(p_state, 0, 2);
-			lua_pushinteger(p_state, value.x); lua_setfield(p_state, -2, "x");
-			lua_pushinteger(p_state, value.y); lua_setfield(p_state, -2, "y");
+			lua_pushinteger(p_state, value.x);
+			lua_setfield(p_state, -2, "x");
+			lua_pushinteger(p_state, value.y);
+			lua_setfield(p_state, -2, "y");
 		} break;
 		case Variant::VECTOR3I: {
 			Vector3i value = p_value;
 			lua_createtable(p_state, 0, 3);
-			lua_pushinteger(p_state, value.x); lua_setfield(p_state, -2, "x");
-			lua_pushinteger(p_state, value.y); lua_setfield(p_state, -2, "y");
-			lua_pushinteger(p_state, value.z); lua_setfield(p_state, -2, "z");
+			lua_pushinteger(p_state, value.x);
+			lua_setfield(p_state, -2, "x");
+			lua_pushinteger(p_state, value.y);
+			lua_setfield(p_state, -2, "y");
+			lua_pushinteger(p_state, value.z);
+			lua_setfield(p_state, -2, "z");
 		} break;
 		case Variant::VECTOR4: {
 			Vector4 value = p_value;
 			lua_createtable(p_state, 0, 4);
-			lua_pushnumber(p_state, value.x); lua_setfield(p_state, -2, "x");
-			lua_pushnumber(p_state, value.y); lua_setfield(p_state, -2, "y");
-			lua_pushnumber(p_state, value.z); lua_setfield(p_state, -2, "z");
-			lua_pushnumber(p_state, value.w); lua_setfield(p_state, -2, "w");
+			lua_pushnumber(p_state, value.x);
+			lua_setfield(p_state, -2, "x");
+			lua_pushnumber(p_state, value.y);
+			lua_setfield(p_state, -2, "y");
+			lua_pushnumber(p_state, value.z);
+			lua_setfield(p_state, -2, "z");
+			lua_pushnumber(p_state, value.w);
+			lua_setfield(p_state, -2, "w");
 		} break;
 		case Variant::COLOR: {
 			Color value = p_value;
 			lua_createtable(p_state, 0, 4);
-			lua_pushnumber(p_state, value.r); lua_setfield(p_state, -2, "r");
-			lua_pushnumber(p_state, value.g); lua_setfield(p_state, -2, "g");
-			lua_pushnumber(p_state, value.b); lua_setfield(p_state, -2, "b");
-			lua_pushnumber(p_state, value.a); lua_setfield(p_state, -2, "a");
+			lua_pushnumber(p_state, value.r);
+			lua_setfield(p_state, -2, "r");
+			lua_pushnumber(p_state, value.g);
+			lua_setfield(p_state, -2, "g");
+			lua_pushnumber(p_state, value.b);
+			lua_setfield(p_state, -2, "b");
+			lua_pushnumber(p_state, value.a);
+			lua_setfield(p_state, -2, "a");
 		} break;
 		case Variant::ARRAY: {
 			Array value = p_value;
@@ -573,7 +627,9 @@ static void _push_variant_to_lua(lua_State *p_state, const Variant &p_value) {
 			lua_createtable(p_state, 0, keys.size());
 			for (int i = 0; i < keys.size(); i++) {
 				Variant key = keys[i];
-				if (key.get_type() != Variant::STRING && key.get_type() != Variant::STRING_NAME && key.get_type() != Variant::INT) continue;
+				if (key.get_type() != Variant::STRING && key.get_type() != Variant::STRING_NAME && key.get_type() != Variant::INT) {
+					continue;
+				}
 				_push_variant_to_lua(p_state, key);
 				_push_variant_to_lua(p_state, value[key]);
 				lua_settable(p_state, -3);
@@ -581,7 +637,10 @@ static void _push_variant_to_lua(lua_State *p_state, const Variant &p_value) {
 		} break;
 		case Variant::OBJECT: {
 			Object *object = p_value;
-			if (!object) { lua_pushnil(p_state); break; }
+			if (!object) {
+				lua_pushnil(p_state);
+				break;
+			}
 			// Pass a read-only snapshot table, never an engine pointer or callable userdata.
 			lua_createtable(p_state, 0, 8);
 			lua_pushstring(p_state, object->get_class().utf8().get_data());
@@ -592,11 +651,18 @@ static void _push_variant_to_lua(lua_State *p_state, const Variant &p_value) {
 			for (const char *field : safe_fields) {
 				bool exists = false;
 				for (const PropertyInfo &property : properties) {
-					if (property.name == StringName(field)) { exists = true; break; }
+					if (property.name == StringName(field)) {
+						exists = true;
+						break;
+					}
 				}
-				if (!exists) continue;
+				if (!exists) {
+					continue;
+				}
 				Variant field_value = object->get(StringName(field));
-				if (field_value.get_type() == Variant::NIL) continue;
+				if (field_value.get_type() == Variant::NIL) {
+					continue;
+				}
 				lua_pushstring(p_state, field);
 				_push_variant_to_lua(p_state, field_value);
 				lua_settable(p_state, -3);
@@ -629,7 +695,9 @@ static void _push_variant_to_lua(lua_State *p_state, const Variant &p_value) {
 }
 
 Variant LuaRuntime::get_global_value(const String &p_name) {
-	if (!state) return Variant();
+	if (!state) {
+		return Variant();
+	}
 	CharString name = p_name.utf8();
 	lua_getglobal(state, name.get_data());
 	Variant value = _lua_to_variant(state, -1);
@@ -638,7 +706,9 @@ Variant LuaRuntime::get_global_value(const String &p_name) {
 }
 
 void LuaRuntime::set_global_value(const String &p_name, const Variant &p_value) {
-	if (!state) return;
+	if (!state) {
+		return;
+	}
 	CharString name = p_name.utf8();
 	_push_variant_to_lua(state, p_value);
 	lua_setglobal(state, name.get_data());
@@ -715,9 +785,13 @@ Node *LuaRuntime::get_target_node() const {
 
 bool LuaRuntime::select_node(const NodePath &p_path) {
 	Node *root = get_target_node();
-	if (!root) return false;
+	if (!root) {
+		return false;
+	}
 	Node *selected = root->get_node_or_null(p_path);
-	if (!selected) return false;
+	if (!selected) {
+		return false;
+	}
 	target_node_id = selected->get_instance_id();
 	return true;
 }
