@@ -445,13 +445,17 @@ bool LuaScriptInstance::set(const StringName &p_name, const Variant &p_value) {
 }
 
 bool LuaScriptInstance::get(const StringName &p_name, Variant &r_ret) const {
-	if (!loaded || runtime.is_null() || script.is_null()) return false;
+	if (!loaded || runtime.is_null() || script.is_null()) {
+		return false;
+	}
 	Array exports = _lua_export_declarations(script->get_source_code());
 	for (int i = 0; i < exports.size(); i++) {
 		Dictionary item = exports[i];
 		if (StringName(String(item["name"])) == p_name) {
 			r_ret = runtime->get_global_value(String(p_name));
-			if (r_ret.get_type() == Variant::NIL) r_ret = item["default"];
+			if (r_ret.get_type() == Variant::NIL) {
+				r_ret = item["default"];
+			}
 			return true;
 		}
 	}
@@ -470,17 +474,23 @@ Variant::Type LuaScriptInstance::get_property_type(const StringName &p_name, boo
 		for (int i = 0; i < exports.size(); i++) {
 			Dictionary item = exports[i];
 			if (StringName(String(item["name"])) == p_name) {
-				if (r_is_valid) *r_is_valid = true;
+				if (r_is_valid) {
+					*r_is_valid = true;
+				}
 				return (Variant::Type)(int)item["type"];
 			}
 		}
 	}
-	if (r_is_valid) *r_is_valid = false;
+	if (r_is_valid) {
+		*r_is_valid = false;
+	}
 	return Variant::NIL;
 }
 
 void LuaScriptInstance::get_method_list(List<MethodInfo> *r_list) const {
-	if (!script.is_null()) script->get_script_method_list(r_list);
+	if (!script.is_null()) {
+		script->get_script_method_list(r_list);
+	}
 }
 
 bool LuaScriptInstance::has_method(const StringName &p_method) const {
