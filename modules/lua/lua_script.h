@@ -41,8 +41,8 @@ public:
 	bool is_script_valid() const override { return valid; }
 	bool is_abstract() const override { return false; }
 	ScriptLanguage *get_language() const override;
-	bool has_script_signal(const StringName &p_signal) const override { return false; }
-	void get_script_signal_list(List<MethodInfo> *r_signals) const override {}
+	bool has_script_signal(const StringName &p_signal) const override;
+	void get_script_signal_list(List<MethodInfo> *r_signals) const override;
 	bool get_property_default_value(const StringName &p_property, Variant &r_value) const override;
 	void get_script_method_list(List<MethodInfo> *r_list) const override;
 	void get_script_property_list(List<PropertyInfo> *r_list) const override;
