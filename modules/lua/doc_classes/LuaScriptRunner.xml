@@ -2,6 +2,7 @@
 <class name="LuaScriptRunner" inherits="Node">
   <brief_description>Runs a pure Lua gameplay script without requiring a GDScript wrapper.</brief_description>
   <description>Attach this native Node to a scene and set script_path to a .lua file. The runner executes the file on ready, then calls optional global _ready() and _process(delta) functions. The same native Lua runtime is compiled into editor and export templates when the lua module is enabled.</description>
+  <tutorials />
   <methods>
     <method name="get_runtime">
       <return type="LuaRuntime" />
