@@ -3,7 +3,6 @@
 #include "core/io/file_access.h"
 #include "core/object/class_db.h"
 #include "core/object/object_db.h"
-#include "core/config/engine.h"
 #include "core/io/resource_loader.h"
 #include "scene/main/node.h"
 #include "scene/main/scene_tree.h"
@@ -121,7 +120,9 @@ int _nexo_add_scene(lua_State *p_state) {
 
 int _nexo_change_scene(lua_State *p_state) {
     const char *raw_path = luaL_checkstring(p_state, 1);
-    SceneTree *tree = Object::cast_to<SceneTree>(Engine::get_singleton()->get_main_loop());
+    LuaRuntime *runtime = _runtime(p_state);
+    Node *target = runtime ? runtime->get_target_node() : nullptr;
+    SceneTree *tree = target ? target->get_tree() : nullptr;
     if (!tree) return luaL_error(p_state, "Nexo.scene.change requires an active SceneTree");
     Ref<PackedScene> packed = ResourceLoader::load(String::utf8(raw_path), "PackedScene");
     if (packed.is_null()) return luaL_error(p_state, "Nexo.scene.change could not load PackedScene");
@@ -296,8 +297,10 @@ Dictionary LuaRuntime::execute_string(const String &p_source, const String &p_so
     lua_sethook(state, nullptr, 0, 0);
     if (call_status != LUA_OK) {
         const String error = _stack_error(state);
+        const int line = _line_from_error(error, p_source_name);
+        ERR_PRINT(vformat("Lua runtime error in %s:%d: %s", p_source_name, line, error));
         lua_settop(state, 0);
-        return _result(false, error, _line_from_error(error, p_source_name), "runtime");
+        return _result(false, error, line, "runtime");
     }
     lua_settop(state, 0);
     return _result(true);
