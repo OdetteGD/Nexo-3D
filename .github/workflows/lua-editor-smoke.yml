@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: nexo-lua-scripting-${{ github.ref }}
+  group: lua-editor-smoke-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
