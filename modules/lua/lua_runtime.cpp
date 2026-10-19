@@ -502,9 +502,60 @@ static void _push_variant_to_lua(lua_State *p_state, const Variant &p_value) {
 		case Variant::FLOAT:
 			lua_pushnumber(p_state, (lua_Number)(double)p_value);
 			break;
-		case Variant::STRING: {
-			CharString value = String(p_value).utf8();
+		case Variant::STRING:
+		case Variant::STRING_NAME:
+		case Variant::NODE_PATH: {
+			CharString value = p_value.stringify().utf8();
 			lua_pushlstring(p_state, value.get_data(), value.length());
+		} break;
+		case Variant::VECTOR2I: {
+			Vector2i value = p_value;
+			lua_createtable(p_state, 0, 2);
+			lua_pushinteger(p_state, value.x); lua_setfield(p_state, -2, "x");
+			lua_pushinteger(p_state, value.y); lua_setfield(p_state, -2, "y");
+		} break;
+		case Variant::VECTOR3I: {
+			Vector3i value = p_value;
+			lua_createtable(p_state, 0, 3);
+			lua_pushinteger(p_state, value.x); lua_setfield(p_state, -2, "x");
+			lua_pushinteger(p_state, value.y); lua_setfield(p_state, -2, "y");
+			lua_pushinteger(p_state, value.z); lua_setfield(p_state, -2, "z");
+		} break;
+		case Variant::VECTOR4: {
+			Vector4 value = p_value;
+			lua_createtable(p_state, 0, 4);
+			lua_pushnumber(p_state, value.x); lua_setfield(p_state, -2, "x");
+			lua_pushnumber(p_state, value.y); lua_setfield(p_state, -2, "y");
+			lua_pushnumber(p_state, value.z); lua_setfield(p_state, -2, "z");
+			lua_pushnumber(p_state, value.w); lua_setfield(p_state, -2, "w");
+		} break;
+		case Variant::COLOR: {
+			Color value = p_value;
+			lua_createtable(p_state, 0, 4);
+			lua_pushnumber(p_state, value.r); lua_setfield(p_state, -2, "r");
+			lua_pushnumber(p_state, value.g); lua_setfield(p_state, -2, "g");
+			lua_pushnumber(p_state, value.b); lua_setfield(p_state, -2, "b");
+			lua_pushnumber(p_state, value.a); lua_setfield(p_state, -2, "a");
+		} break;
+		case Variant::ARRAY: {
+			Array value = p_value;
+			lua_createtable(p_state, value.size(), 0);
+			for (int i = 0; i < value.size(); i++) {
+				_push_variant_to_lua(p_state, value[i]);
+				lua_rawseti(p_state, -2, i + 1);
+			}
+		} break;
+		case Variant::DICTIONARY: {
+			Dictionary value = p_value;
+			Array keys = value.keys();
+			lua_createtable(p_state, 0, keys.size());
+			for (int i = 0; i < keys.size(); i++) {
+				Variant key = keys[i];
+				if (key.get_type() != Variant::STRING && key.get_type() != Variant::STRING_NAME && key.get_type() != Variant::INT) continue;
+				_push_variant_to_lua(p_state, key);
+				_push_variant_to_lua(p_state, value[key]);
+				lua_settable(p_state, -3);
+			}
 		} break;
 		case Variant::VECTOR2: {
 			Vector2 value = p_value;
