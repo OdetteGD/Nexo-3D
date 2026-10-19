@@ -190,6 +190,7 @@ void LuaRuntime::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("execute_string", "source", "source_name"), &LuaRuntime::execute_string, DEFVAL("res://script.lua"));
 	ClassDB::bind_method(D_METHOD("check_file", "path"), &LuaRuntime::check_file);
 	ClassDB::bind_method(D_METHOD("execute_file", "path"), &LuaRuntime::execute_file);
+	ClassDB::bind_method(D_METHOD("call_function", "name", "delta", "pass_delta"), &LuaRuntime::call_function, DEFVAL(0.0), DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("reset"), &LuaRuntime::reset);
 	ClassDB::bind_method(D_METHOD("set_target_node", "node"), &LuaRuntime::set_target_node);
 	ClassDB::bind_method(D_METHOD("get_target_node"), &LuaRuntime::get_target_node);
@@ -351,6 +352,36 @@ Dictionary LuaRuntime::execute_file(const String &p_path) {
 		return _result(false, "Unable to open Lua file: " + p_path, -1, "io");
 	}
 	return execute_string(file->get_as_text(), p_path);
+}
+
+Dictionary LuaRuntime::call_function(const String &p_name, double p_delta, bool p_pass_delta) {
+	if (!state) {
+		return _result(false, "Could not create Lua state", -1, "runtime");
+	}
+	CharString function_name = p_name.utf8();
+	lua_getglobal(state, function_name.get_data());
+	if (!lua_isfunction(state, -1)) {
+		lua_pop(state, 1);
+		return _result(true);
+	}
+	int argument_count = 0;
+	if (p_pass_delta) {
+		lua_pushnumber(state, p_delta);
+		argument_count = 1;
+	}
+	remaining_instructions = instruction_budget;
+	lua_sethook(state, _instruction_hook, LUA_MASKCOUNT, LUA_HOOK_GRANULARITY);
+	const int status = lua_pcall(state, argument_count, 0, 0);
+	lua_sethook(state, nullptr, 0, 0);
+	if (status != LUA_OK) {
+		const String error = _stack_error(state);
+		const int line = _line_from_error(error, String("res://") + function_name);
+		ERR_PRINT(vformat("Lua callback '%s' failed: %s", p_name, error));
+		lua_settop(state, 0);
+		return _result(false, error, line, "runtime");
+	}
+	lua_settop(state, 0);
+	return _result(true);
 }
 
 void LuaRuntime::set_target_node(Node *p_node) {
