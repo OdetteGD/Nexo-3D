@@ -579,6 +579,22 @@ static void _push_variant_to_lua(lua_State *p_state, const Variant &p_value) {
 				lua_settable(p_state, -3);
 			}
 		} break;
+		case Variant::OBJECT: {
+			Object *object = p_value;
+			if (!object) { lua_pushnil(p_state); break; }
+			// Pass a read-only snapshot table, never an engine pointer or callable userdata.
+			lua_createtable(p_state, 0, 8);
+			lua_pushstring(p_state, object->get_class().utf8().get_data());
+			lua_setfield(p_state, -2, "class_name");
+			static const char *safe_fields[] = { "pressed", "keycode", "physical_keycode", "unicode", "position", "global_position", "relative", "button_index", "shift_pressed", "ctrl_pressed", "alt_pressed", "meta_pressed", "echo", "double_click" };
+			for (const char *field : safe_fields) {
+				Variant field_value = object->get(StringName(field));
+				if (field_value.get_type() == Variant::NIL) continue;
+				lua_pushstring(p_state, field);
+				_push_variant_to_lua(p_state, field_value);
+				lua_settable(p_state, -3);
+			}
+		} break;
 		case Variant::VECTOR2: {
 			Vector2 value = p_value;
 			lua_createtable(p_state, 0, 2);
