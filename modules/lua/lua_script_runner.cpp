@@ -43,7 +43,9 @@ void LuaScriptRunner::_ready() {
 		return;
 	}
 
-	runtime->set_target_node(this);
+	// Bind gameplay APIs to the parent scene node when present. This lets a Lua
+	// runner child control its Node3D parent without a GDScript adapter.
+	runtime->set_target_node(get_parent() ? get_parent() : this);
 	Dictionary result = runtime->execute_file(script_path);
 	if (!bool(result.get("ok", false))) {
 		ERR_PRINT(vformat("Unable to load Lua script '%s': %s", script_path, String(result.get("error", "Unknown error"))));
