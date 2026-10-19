@@ -210,6 +210,8 @@ void LuaRuntime::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("execute_file", "path"), &LuaRuntime::execute_file);
 	ClassDB::bind_method(D_METHOD("call_function", "name", "delta", "pass_delta"), &LuaRuntime::call_function, DEFVAL(0.0), DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("call_function_args", "name", "args"), &LuaRuntime::call_function_args);
+	ClassDB::bind_method(D_METHOD("get_global_value", "name"), &LuaRuntime::get_global_value);
+	ClassDB::bind_method(D_METHOD("set_global_value", "name", "value"), &LuaRuntime::set_global_value);
 	ClassDB::bind_method(D_METHOD("reset"), &LuaRuntime::reset);
 	ClassDB::bind_method(D_METHOD("set_target_node", "node"), &LuaRuntime::set_target_node);
 	ClassDB::bind_method(D_METHOD("get_target_node"), &LuaRuntime::get_target_node);
@@ -477,6 +479,22 @@ static void _push_variant_to_lua(lua_State *p_state, const Variant &p_value) {
 			lua_pushnil(p_state);
 			break;
 	}
+}
+
+Variant LuaRuntime::get_global_value(const String &p_name) {
+	if (!state) return Variant();
+	CharString name = p_name.utf8();
+	lua_getglobal(state, name.get_data());
+	Variant value = _lua_to_variant(state, -1);
+	lua_pop(state, 1);
+	return value;
+}
+
+void LuaRuntime::set_global_value(const String &p_name, const Variant &p_value) {
+	if (!state) return;
+	CharString name = p_name.utf8();
+	_push_variant_to_lua(state, p_value);
+	lua_setglobal(state, name.get_data());
 }
 
 Dictionary LuaRuntime::call_function_args(const String &p_name, const Array &p_args) {
