@@ -1,6 +1,7 @@
 #include "lua_runtime.h"
 
 #include "core/io/file_access.h"
+#include "core/error/error_macros.h"
 #include "core/object/class_db.h"
 #include "core/object/object_db.h"
 #include "core/io/resource_loader.h"
