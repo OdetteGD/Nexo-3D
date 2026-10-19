@@ -244,7 +244,7 @@ bool LuaScript::get_property_default_value(const StringName &p_property, Variant
 	Array exports = _lua_export_declarations(source_code);
 	for (int i = 0; i < exports.size(); i++) {
 		Dictionary item = exports[i];
-		if (StringName(item["name"]) == p_property) {
+		if (StringName(String(item["name"])) == p_property) {
 			r_value = item["default"];
 			return true;
 		}
@@ -256,7 +256,7 @@ void LuaScript::get_script_property_list(List<PropertyInfo> *r_list) const {
 	Array exports = _lua_export_declarations(source_code);
 	for (int i = 0; i < exports.size(); i++) {
 		Dictionary item = exports[i];
-		PropertyInfo property((Variant::Type)(int)item["type"], StringName(item["name"]));
+		PropertyInfo property((Variant::Type)(int)item["type"], StringName(String(item["name"])));
 		property.usage |= PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_EDITOR;
 		r_list->push_back(property);
 	}
@@ -350,7 +350,7 @@ bool LuaScriptInstance::set(const StringName &p_name, const Variant &p_value) {
 	Array exports = _lua_export_declarations(script->get_source_code());
 	for (int i = 0; i < exports.size(); i++) {
 		Dictionary item = exports[i];
-		if (StringName(item["name"]) == p_name) {
+		if (StringName(String(item["name"])) == p_name) {
 			runtime->set_global_value(String(p_name), p_value);
 			return true;
 		}
@@ -363,7 +363,7 @@ bool LuaScriptInstance::get(const StringName &p_name, Variant &r_ret) const {
 	Array exports = _lua_export_declarations(script->get_source_code());
 	for (int i = 0; i < exports.size(); i++) {
 		Dictionary item = exports[i];
-		if (StringName(item["name"]) == p_name) {
+		if (StringName(String(item["name"])) == p_name) {
 			r_ret = runtime->get_global_value(String(p_name));
 			if (r_ret.get_type() == Variant::NIL) r_ret = item["default"];
 			return true;
@@ -381,7 +381,7 @@ Variant::Type LuaScriptInstance::get_property_type(const StringName &p_name, boo
 		Array exports = _lua_export_declarations(script->get_source_code());
 		for (int i = 0; i < exports.size(); i++) {
 			Dictionary item = exports[i];
-			if (StringName(item["name"]) == p_name) {
+			if (StringName(String(item["name"])) == p_name) {
 				if (r_is_valid) *r_is_valid = true;
 				return (Variant::Type)(int)item["type"];
 			}
