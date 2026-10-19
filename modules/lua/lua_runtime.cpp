@@ -34,7 +34,6 @@
 #include "core/io/file_access.h"
 #include "core/io/resource_loader.h"
 #include "core/object/class_db.h"
-#include "core/object/object_db.h"
 #include "core/string/print_string.h"
 #include "core/string/ustring.h"
 #include "scene/3d/node_3d.h"
