@@ -19,7 +19,7 @@ static void _lua_editor_init() {
 #endif
 
 void initialize_lua_module(ModuleInitializationLevel p_level) {
-    if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
+    if (p_level == MODULE_INITIALIZATION_LEVEL_SERVERS) {
         GDREGISTER_CLASS(LuaRuntime);
     }
 #ifdef TOOLS_ENABLED
