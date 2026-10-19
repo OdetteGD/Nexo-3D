@@ -17,6 +17,7 @@ Nexo-3D vendors **Lua 5.4.8** under `thirdparty/lua` (MIT license), built throug
 - `Nexo.scene.change("res://scene.tscn")`: request a change to the active SceneTree scene.
 - Lua editor syntax highlighter for keywords, strings, comments, numbers, built-ins, and function calls.
 - Native `ScriptInstance` method discovery for user-defined top-level Lua `function name(...)` declarations, including method argument metadata exposed to Godot.
+- Callback argument forwarding from Godot to Lua for nil, booleans, integers, floats, strings, `Vector2`, and `Vector3` values.
 
 ## Pure Lua scene setup
 
@@ -27,9 +28,9 @@ Nexo-3D vendors **Lua 5.4.8** under `thirdparty/lua` (MIT license), built throug
 
 `LuaScriptRunner` and Lua 5.4 are compiled as part of the engine module, including Android export templates when `module_lua_enabled=yes`. See `examples/main.lua` for a pure Lua lifecycle example and `examples/control_3d_scene.lua` for scene operations.
 
-## Limitations still remaining
+## Remaining integration work
 
-This is a native C++ runner for pure Lua gameplay, but **not yet a full first-class Godot `ScriptLanguage` implementation**. `.lua` files are selected through the LuaScriptRunner inspector property rather than Godot’s built-in New Script / attach-script flow. Native Script resource integration, live parser diagnostics in the Script Editor Problems panel, breakpoints/step-through debugging, source-mapped stack frames, and broader SceneTree/Node/Object/Input APIs still require dedicated integration work. The highlighter is lexical, while parser errors are returned by `check_syntax`. The instruction budget limits Lua VM instructions, not time spent in native engine calls. Treat scripts as trusted project code and expose only reviewed bindings.
+`.lua` is registered as a native `Script` resource and is intended to be attachable through Godot’s script workflow. This implementation is still not feature-parity with GDScript: exported/typed properties, script-defined signals, inheritance, complete editor semantic completion, parser diagnostics in the Script Editor Problems panel, breakpoints and step-through debugging, source-mapped stack frames, full Lua-to-Variant return-value conversion, and broad Node/Object/Input APIs need additional implementation and validation. Callback argument conversion currently supports nil, booleans, integers, floats, strings, `Vector2`, and `Vector3`; other Variant types are passed as `nil` until safe conversions are implemented. The highlighter is lexical, while parser errors are returned by `check_syntax`. The instruction budget limits Lua VM instructions, not time spent in native engine calls. Treat scripts as trusted project code and expose only reviewed bindings.
 
 ## Compatibility
 
