@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="LuaRuntime" inherits="RefCounted">
+  <brief_description>Embedded Lua 5.4 runtime.</brief_description>
+  <description>Runs Lua source with protected calls, restricted libraries, and an instruction budget.</description>
+</class>
