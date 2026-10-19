@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="LuaRuntime" inherits="RefCounted">
+  <brief_description>Embedded Lua 5.4 runtime for syntax checking and protected script execution.</brief_description>
+  <description>Each instance owns a separate Lua state. The runtime opens a restricted standard-library set and enforces a Lua VM instruction-count budget during execution.</description>
+  <methods>
+    <method name="check_syntax">
+      <return type="Dictionary" />
+      <param index="0" name="source" type="String" />
+      <param index="1" name="source_name" type="String" />
+      <description>Compiles source without executing it. Returns ok, error, line, and kind fields.</description>
+    </method>
+    <method name="execute_string">
+      <return type="Dictionary" />
+      <param index="0" name="source" type="String" />
+      <param index="1" name="source_name" type="String" />
+      <description>Executes source with a protected Lua call and returns structured diagnostics.</description>
+    </method>
+    <method name="check_file">
+      <return type="Dictionary" />
+      <param index="0" name="path" type="String" />
+      <description>Reads a source file and compiles it without execution.</description>
+    </method>
+    <method name="execute_file">
+      <return type="Dictionary" />
+      <param index="0" name="path" type="String" />
+      <description>Reads a source file and executes it with a protected call.</description>
+    </method>
+    <method name="reset">
+      <description>Recreates the Lua state and clears globals.</description>
+    </method>
+    <method name="set_instruction_budget">
+      <param index="0" name="instructions" type="int" />
+      <description>Sets the VM instruction budget for each execution.</description>
+    </method>
+    <method name="get_instruction_budget">
+      <return type="int" />
+      <description>Returns the configured VM instruction budget.</description>
+    </method>
+  </methods>
+</class>
