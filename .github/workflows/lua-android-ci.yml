@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: lua-android-${{ github.ref }}
+  group: nexo-lua-scripting-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
