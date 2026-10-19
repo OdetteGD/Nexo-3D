@@ -1,0 +1,1 @@
+Lua 5.4.8 upstream source files are intended to be vendored here from https://github.com/lua/lua/tree/v5.4.8. Lua is distributed under the MIT license; retain the upstream license notice in every source file. This directory is currently a staging note, not a bundled runtime.
