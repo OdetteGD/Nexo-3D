@@ -24,6 +24,8 @@ protected:
 public:
     // Results contain: ok, error, line, and kind ("syntax" or "runtime").
     Dictionary check_syntax(const String &p_source, const String &p_source_name = "res://script.lua");
+    Dictionary check_file(const String &p_path);
+    Dictionary execute_file(const String &p_path);
     Dictionary execute_string(const String &p_source, const String &p_source_name = "res://script.lua");
     void reset();
     void set_instruction_budget(int p_instructions);
