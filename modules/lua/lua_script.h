@@ -25,9 +25,9 @@ protected:
 
 public:
 	bool can_instantiate() const override { return valid; }
-	Ref<Script> get_base_script() const override { return Ref<Script>(); }
+	Ref<Script> get_base_script() const override;
 	StringName get_global_name() const override { return StringName(); }
-	bool inherits_script(const Ref<Script> &p_script) const override { return p_script.ptr() == this; }
+	bool inherits_script(const Ref<Script> &p_script) const override;
 	StringName get_instance_base_type() const override { return "Node"; }
 	ScriptInstance *instance_create(Object *p_this) override;
 	bool has_source_code() const override { return true; }
