@@ -36,3 +36,30 @@ This is a native C++ runner for pure Lua gameplay, but **not yet a full first-cl
 - LuaJIT 2.1: separate optional backend with Lua 5.1 semantics.
 - Roblox Luau: separate language/runtime.
 - LÖVE callbacks/modules: not included by this bridge.
+
+
+## Native `.lua` Script resource
+
+The Lua module registers `LuaScriptLanguage` with `ScriptServer` and installs a `.lua` resource loader/saver. In a tools-enabled editor build, Lua appears alongside GDScript in the language selector for creating a script. Existing `.lua` files load as `LuaScript` resources and can be attached to Node-derived objects.
+
+The initial native lifecycle bridge supports these global Lua callbacks:
+
+- `function _enter_tree()`
+- `function _ready()`
+- `function _process(delta)`
+- `function _physics_process(delta)`
+- `function _exit_tree()`
+
+Example:
+
+```lua
+function _ready()
+    Nexo.log("Attached Lua script is running")
+end
+
+function _process(delta)
+    Nexo.node.rotate_y(delta * 0.5)
+end
+```
+
+The embedded runtime intentionally exposes a restricted standard library and the `Nexo` API. Script inheritance, exported properties, custom signals, complete debugger integration, and editor semantic completion are not implemented yet. The Android workflow builds release engine templates for arm64, arm32, and x86_64; these are engine templates, not a ready-made APK.
