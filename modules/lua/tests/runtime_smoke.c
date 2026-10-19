@@ -28,8 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#include "lua.h"
 #include "lauxlib.h"
+#include "lua.h"
 #include "lualib.h"
 
 #include <stdio.h>
