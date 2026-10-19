@@ -1,6 +1,7 @@
 #include "lua_syntax_highlighter.h"
 
 #include "scene/gui/text_edit.h"
+#include "core/templates/hash_set.h"
 
 #include <cctype>
 
