@@ -49,6 +49,8 @@ String _stack_error(lua_State *p_state) {
 void LuaRuntime::_bind_methods() {
     ClassDB::bind_method(D_METHOD("check_syntax", "source", "source_name"), &LuaRuntime::check_syntax, DEFVAL("res://script.lua"));
     ClassDB::bind_method(D_METHOD("execute_string", "source", "source_name"), &LuaRuntime::execute_string, DEFVAL("res://script.lua"));
+    ClassDB::bind_method(D_METHOD("check_file", "path"), &LuaRuntime::check_file);
+    ClassDB::bind_method(D_METHOD("execute_file", "path"), &LuaRuntime::execute_file);
     ClassDB::bind_method(D_METHOD("reset"), &LuaRuntime::reset);
     ClassDB::bind_method(D_METHOD("set_instruction_budget", "instructions"), &LuaRuntime::set_instruction_budget);
     ClassDB::bind_method(D_METHOD("get_instruction_budget"), &LuaRuntime::get_instruction_budget);
@@ -159,6 +161,23 @@ Dictionary LuaRuntime::execute_string(const String &p_source, const String &p_so
     }
     lua_settop(state, 0);
     return _result(true);
+}
+
+
+Dictionary LuaRuntime::check_file(const String &p_path) {
+    Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ);
+    if (file.is_null()) {
+        return _result(false, "Unable to open Lua file: " + p_path, -1, "io");
+    }
+    return check_syntax(file->get_as_text(), p_path);
+}
+
+Dictionary LuaRuntime::execute_file(const String &p_path) {
+    Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ);
+    if (file.is_null()) {
+        return _result(false, "Unable to open Lua file: " + p_path, -1, "io");
+    }
+    return execute_string(file->get_as_text(), p_path);
 }
 
 void LuaRuntime::reset() {
