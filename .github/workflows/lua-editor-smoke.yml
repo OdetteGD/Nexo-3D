@@ -66,8 +66,16 @@ jobs:
           renderer/rendering_method.mobile="gl_compatibility"
           EOF
           cat > tests/lua_editor_smoke/main.lua <<'EOF'
+          -- @export health: int = 100
+          -- @signal health_changed(amount: int)
+
           function _ready()
               Nexo.log("LUA_EDITOR_SMOKE_READY")
+              Nexo.signal.emit("health_changed", health)
+          end
+
+          function echo_value(value)
+              return value
           end
 
           function _process(delta)
