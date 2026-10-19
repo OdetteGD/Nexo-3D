@@ -38,7 +38,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install SCons
-        run: python -m pip install --upgrade scons
+        run: python -m pip install --upgrade scons zstandard
 
       - name: Validate native Lua ScriptLanguage wiring
         run: |
