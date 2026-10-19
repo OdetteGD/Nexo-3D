@@ -31,9 +31,17 @@
 #include "register_types.h"
 
 #include "lua_runtime.h"
+#include "lua_script.h"
 #include "lua_script_runner.h"
 
 #include "core/object/class_db.h"
+#include "core/object/script_language.h"
+#include "core/io/file_access.h"
+#include "core/io/resource_loader.h"
+#include "core/io/resource_saver.h"
+
+static Ref<ResourceFormatLoader> lua_resource_loader;
+static Ref<ResourceFormatSaver> lua_resource_saver;
 
 #ifdef TOOLS_ENABLED
 #include "editor/editor_node.h"
@@ -51,8 +59,41 @@ static void _lua_editor_init() {
 
 void initialize_lua_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_SERVERS) {
+		GDREGISTER_CLASS(LuaScript);
 		GDREGISTER_CLASS(LuaRuntime);
 		GDREGISTER_CLASS(LuaScriptRunner);
+		LuaScriptLanguage *language = memnew(LuaScriptLanguage);
+		ScriptServer::register_language(language);
+
+		class LuaResourceLoader : public ResourceFormatLoader { public:
+			Ref<Resource> load(const String &p_path, const String &p_original_path = \"\" , Error *r_error = nullptr, bool p_use_sub_threads = false, float *r_progress = nullptr, CacheMode p_cache_mode = CACHE_MODE_REUSE) override {
+				Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ);
+				if (file.is_null()) { if (r_error) *r_error = ERR_CANT_OPEN; return Ref<Resource>(); }
+				Ref<LuaScript> script; script.instantiate(); script->set_path(p_path);
+				script->set_source_code(file->get_as_text());
+				Error err = script->reload(); if (r_error) *r_error = err; if (err != OK) return Ref<Resource>(); return script;
+			}
+			void get_recognized_extensions(List<String> *p_extensions) const override { p_extensions->push_back(\"lua\"); }
+			bool handles_type(const String &p_type) const override { return p_type == \"LuaScript\" || p_type == \"Script\"; }
+			String get_resource_type(const String &p_path) const override { return p_path.get_extension().to_lower() == \"lua\" ? \"LuaScript\" : String(); }
+			void get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types = false) override {}
+			void get_classes_used(const String &p_path, HashSet<StringName> *r_classes) override {}
+		};
+		class LuaResourceSaver : public ResourceFormatSaver { public:
+			Error save(const Ref<Resource> &p_resource, const String &p_path, uint32_t p_flags = 0) override {
+				Ref<LuaScript> script = p_resource;
+				if (script.is_null()) return ERR_INVALID_PARAMETER;
+				Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::WRITE);
+				if (file.is_null()) return ERR_CANT_CREATE;
+				file->store_string(script->get_source_code()); return file->get_error();
+			}
+			void get_recognized_extensions(const Ref<Resource> &p_resource, List<String> *p_extensions) const override { if (Object::cast_to<LuaScript>(*p_resource)) p_extensions->push_back(\"lua\"); }
+			bool recognize(const Ref<Resource> &p_resource) const override { return Object::cast_to<LuaScript>(*p_resource) != nullptr; }
+		};
+		lua_resource_loader.instantiate();
+		lua_resource_saver.instantiate();
+		ResourceLoader::add_resource_format_loader(lua_resource_loader);
+		ResourceSaver::add_resource_format_saver(lua_resource_saver);
 	}
 #ifdef TOOLS_ENABLED
 	if (p_level == MODULE_INITIALIZATION_LEVEL_SERVERS) {
