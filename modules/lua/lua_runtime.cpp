@@ -101,7 +101,7 @@ void LuaRuntime::_destroy_state() {
     }
 }
 
-void LuaRuntime::_instruction_hook(lua_State *p_state, void *p_debug) {
+void LuaRuntime::_instruction_hook(lua_State *p_state, lua_Debug *p_debug) {
     (void)p_debug;
     LuaRuntime *runtime = *static_cast<LuaRuntime **>(lua_getextraspace(p_state));
     if (!runtime) {
