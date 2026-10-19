@@ -3,7 +3,9 @@
 #include "core/object/ref_counted.h"
 #include "core/variant/dictionary.h"
 
-struct lua_State;
+extern "C" {
+#include "lua.h"
+}
 
 class LuaRuntime : public RefCounted {
     GDCLASS(LuaRuntime, RefCounted);
@@ -12,7 +14,7 @@ class LuaRuntime : public RefCounted {
     int instruction_budget = 1000000;
     int remaining_instructions = 1000000;
 
-    static void _instruction_hook(lua_State *p_state, void *p_debug);
+    static void _instruction_hook(lua_State *p_state, lua_Debug *p_debug);
     void _create_state();
     void _destroy_state();
 
