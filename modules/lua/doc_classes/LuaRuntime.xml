@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="LuaRuntime" inherits="RefCounted">
-  <brief_description>Embedded Lua 5.4 runtime.</brief_description>
-  <description>Runs Lua source with protected calls, restricted libraries, and an instruction budget.</description>
+  <brief_description>Embedded Lua 5.4 runtime with restricted engine bindings.</brief_description>
+  <description>Each instance owns a separate Lua state, supports syntax checking and protected execution, and exposes a small Nexo API. Bind a Node with set_target_node before using node or scene operations.</description>
+  <methods>
+    <method name="check_syntax"><return type="Dictionary" /><param index="0" name="source" type="String" /><param index="1" name="source_name" type="String" /><description>Compile source without executing it. Returns ok, error, line, and kind fields.</description></method>
+    <method name="check_file"><return type="Dictionary" /><param index="0" name="path" type="String" /><description>Read and compile a Lua file without executing it.</description></method>
+    <method name="execute_string"><return type="Dictionary" /><param index="0" name="source" type="String" /><param index="1" name="source_name" type="String" /><description>Execute source with a protected call. Runtime errors are returned and sent to engine error output.</description></method>
+    <method name="execute_file"><return type="Dictionary" /><param index="0" name="path" type="String" /><description>Read and execute a Lua file with a protected call.</description></method>
+    <method name="set_target_node"><param index="0" name="node" type="Node" /><description>Set the current Node context used by Nexo.node and Nexo.scene APIs.</description></method>
+    <method name="get_target_node"><return type="Node" /><description>Return the current target node, or null if it was freed.</description></method>
+    <method name="select_node"><return type="bool" /><param index="0" name="path" type="NodePath" /><description>Select a child node relative to the current target for subsequent Lua engine calls.</description></method>
+    <method name="reset"><description>Recreate the Lua state and clear script globals.</description></method>
+    <method name="set_instruction_budget"><param index="0" name="instructions" type="int" /><description>Set the Lua VM instruction budget for each execution.</description></method>
+    <method name="get_instruction_budget"><return type="int" /><description>Return the configured VM instruction budget.</description></method>
+  </methods>
 </class>
