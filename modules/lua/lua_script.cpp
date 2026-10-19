@@ -218,6 +218,7 @@ Variant LuaScriptInstance::callp(const StringName &p_method, const Variant **p_a
 }
 
 void LuaScriptInstance::notification(int p_notification, bool p_reversed) {
+	(void)p_reversed;
 	if (!loaded || !runtime.is_valid()) return;
 	Node *node = Object::cast_to<Node>(owner);
 	if (p_notification == Node::NOTIFICATION_READY) {
@@ -230,6 +231,10 @@ void LuaScriptInstance::notification(int p_notification, bool p_reversed) {
 		runtime->call_function("_enter_tree");
 	} else if (p_notification == Node::NOTIFICATION_EXIT_TREE) {
 		runtime->call_function("_exit_tree");
+	} else if (script.is_valid() && script->has_method("_notification")) {
+		Array args;
+		args.push_back(p_notification);
+		runtime->call_function_args("_notification", args);
 	}
 }
 
