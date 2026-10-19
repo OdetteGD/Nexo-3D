@@ -30,6 +30,7 @@
 #include "register_types.h"
 
 #include "lua_runtime.h"
+#include "lua_script_runner.h"
 
 #include "core/object/class_db.h"
 
@@ -50,6 +51,7 @@ static void _lua_editor_init() {
 void initialize_lua_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_SERVERS) {
 		GDREGISTER_CLASS(LuaRuntime);
+		GDREGISTER_CLASS(LuaScriptRunner);
 	}
 #ifdef TOOLS_ENABLED
 	if (p_level == MODULE_INITIALIZATION_LEVEL_SERVERS) {
