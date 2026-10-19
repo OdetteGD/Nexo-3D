@@ -1,31 +1,55 @@
-# Nexo-3D Lua scripting foundation
+# Nexo-3D Lua scripting module
 
-This directory defines the first integration layer for Lua scripting in Nexo-3D (the Godot-derived engine source).
+Nexo-3D now vendors the **Lua 5.4.8** runtime under `thirdparty/lua` (MIT license) and builds it through `modules/lua/SCsub`. The module exposes a small engine-facing `LuaRuntime` object. LuaJIT and Roblox Luau are different runtimes/language targets and are not silently treated as interchangeable with Lua 5.4.
 
-## Runtime decision
+## Current implementation
 
-Use **Lua 5.4 as the initial portable reference runtime** and evaluate **LuaJIT 2.1** as an optional performance backend. LuaJIT implements Lua 5.1 language semantics with selected extensions; it is not a drop-in Lua 5.4 runtime. Keep the engine-facing API independent of either runtime so Android builds can select a supported backend.
+- Embedded Lua 5.4.8 C runtime, compiled with the engine module for desktop and mobile targets.
+- `LuaRuntime.check_syntax(source, source_name)` compiles source without running it and returns a Dictionary with `ok`, `error`, `line`, and `kind`.
+- `LuaRuntime.execute_string(source, source_name)` executes a chunk with protected calls and the same structured result.
+- `LuaRuntime.check_file(path)` and `LuaRuntime.execute_file(path)` read and validate/execute a `.lua` file through Godot's FileAccess abstraction.
+- A restricted standard-library setup: base, table, string, math, and utf8 are opened; `io`, `os`, `debug`, and `package` are not opened. Dynamic/file loading helpers and garbage-collector control are removed from the base environment.
+- Configurable instruction budget with a Lua VM count hook to interrupt runaway scripts.
+- Editor syntax highlighter for Lua keywords, strings, comments, numbers, built-ins, and function calls.
+- CI compiles the vendored C sources and smoke-tests valid execution and invalid syntax diagnostics.
 
-This commit is a foundation and design contract, not a claim that the VM is already embedded in the engine executable.
+## Quick use from engine-side GDScript
 
-## Planned engine integration
+```gdscript
+var lua := LuaRuntime.new()
+var result: Dictionary = lua.check_file("res://scripts/hello.lua")
+if not result.ok:
+    push_error("%s:%s: %s" % [
+        "res://scripts/hello.lua",
+        result.line,
+        result.error
+    ])
+else:
+    var run_result: Dictionary = lua.execute_file("res://scripts/hello.lua")
+    if not run_result.ok:
+        push_error("%s: %s" % [run_result.kind, run_result.error])
+```
 
-1. Add a dedicated engine module with a small adapter interface for create/destroy state, load source, execute protected calls, and format errors.
-2. Expose only an allowlisted Nexo API to scripts. Do not open filesystem, process, package-loading, or native-library APIs by default.
-3. Use protected calls and a per-script instruction/time budget. Never run scripts on the rendering thread.
-4. Map script resources to `.lua` files and provide reload, lifecycle hooks, and debugger-friendly source names.
-5. Keep runtime choice behind build flags so Android ABI builds can ship LuaJIT where supported and fall back to Lua 5.4.
+Or execute a string directly:
 
-## Editor requirements
+```gdscript
+var lua := LuaRuntime.new()
+lua.set_instruction_budget(1000000)
+var result := lua.execute_string("local n = 6 * 7; assert(n == 42)", "res://inline.lua")
+assert(result.ok, result.error)
+```
 
-- Lua syntax highlighting for keywords, strings, numbers, comments, operators, and built-in functions.
-- Parse/compile diagnostics with file path, line and column where the runtime provides them.
-- A Problems panel with clickable diagnostics; syntax errors must not be presented as runtime errors.
-- Validate on save and before play/build, with cancellation/debouncing for editor responsiveness.
-- Preserve source text and report errors instead of crashing the editor.
+## Security and current limitations
 
-Syntax highlighting is presentation only; use the real Lua parser/compiler for syntax validation.
+This is an embedded runtime API and editor syntax-highlighting layer, not yet a complete `ScriptLanguage` implementation. `.lua` files can be read and run explicitly through `LuaRuntime`, but are not yet first-class attachable scene scripts with automatic lifecycle callbacks. The editor highlighter is lexical only; compile diagnostics come from the actual Lua parser through `check_syntax`. The instruction budget limits Lua VM instructions, not native engine calls or wall-clock time. Run untrusted scripts in a separately controlled environment and expose only explicitly approved engine objects/functions.
 
-## Example
+## Runtime compatibility
 
-See `examples/hello.lua` for a runtime-neutral sample. The example uses ordinary Lua and does not assume Roblox's proprietary APIs or LÖVE's global callbacks exist in Nexo-3D.
+- **Lua 5.4.8**: bundled default.
+- **LuaJIT 2.1**: a possible separate backend; LuaJIT follows Lua 5.1 semantics and requires a distinct compatibility test matrix.
+- **Roblox Luau**: separate language/runtime, with syntax and API differences; not provided by this Lua 5.4 runtime.
+- **LÖVE**: its callbacks and modules are not assumed to exist; a LÖVE compatibility layer would be a separate implementation.
+
+## Test
+
+The GitHub Actions workflow runs the syntax fixtures and compiles the vendored runtime with a C smoke test. Engine-level Android/editor builds still need to be run to validate the complete Nexo-3D module on each target ABI.
