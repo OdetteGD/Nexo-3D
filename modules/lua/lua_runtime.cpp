@@ -209,6 +209,7 @@ void LuaRuntime::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("check_file", "path"), &LuaRuntime::check_file);
 	ClassDB::bind_method(D_METHOD("execute_file", "path"), &LuaRuntime::execute_file);
 	ClassDB::bind_method(D_METHOD("call_function", "name", "delta", "pass_delta"), &LuaRuntime::call_function, DEFVAL(0.0), DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("call_function_args", "name", "args"), &LuaRuntime::call_function_args);
 	ClassDB::bind_method(D_METHOD("reset"), &LuaRuntime::reset);
 	ClassDB::bind_method(D_METHOD("set_target_node", "node"), &LuaRuntime::set_target_node);
 	ClassDB::bind_method(D_METHOD("get_target_node"), &LuaRuntime::get_target_node);
@@ -371,6 +372,78 @@ Dictionary LuaRuntime::execute_file(const String &p_path) {
 		return _result(false, "Unable to open Lua file: " + p_path, -1, "io");
 	}
 	return execute_string(file->get_as_text(), p_path);
+}
+
+static void _push_variant_to_lua(lua_State *p_state, const Variant &p_value) {
+	switch (p_value.get_type()) {
+		case Variant::NIL:
+			lua_pushnil(p_state);
+			break;
+		case Variant::BOOL:
+			lua_pushboolean(p_state, (bool)p_value);
+			break;
+		case Variant::INT:
+			lua_pushinteger(p_state, (lua_Integer)(int64_t)p_value);
+			break;
+		case Variant::FLOAT:
+			lua_pushnumber(p_state, (lua_Number)(double)p_value);
+			break;
+		case Variant::STRING: {
+			CharString value = String(p_value).utf8();
+			lua_pushlstring(p_state, value.get_data(), value.length());
+		} break;
+		case Variant::VECTOR2: {
+			Vector2 value = p_value;
+			lua_createtable(p_state, 0, 2);
+			lua_pushnumber(p_state, value.x);
+			lua_setfield(p_state, -2, "x");
+			lua_pushnumber(p_state, value.y);
+			lua_setfield(p_state, -2, "y");
+		} break;
+		case Variant::VECTOR3: {
+			Vector3 value = p_value;
+			lua_createtable(p_state, 0, 3);
+			lua_pushnumber(p_state, value.x);
+			lua_setfield(p_state, -2, "x");
+			lua_pushnumber(p_state, value.y);
+			lua_setfield(p_state, -2, "y");
+			lua_pushnumber(p_state, value.z);
+			lua_setfield(p_state, -2, "z");
+		} break;
+		default:
+			// Unsupported engine objects are represented as nil until safe userdata
+			// wrappers with lifetime tracking are implemented.
+			lua_pushnil(p_state);
+			break;
+	}
+}
+
+Dictionary LuaRuntime::call_function_args(const String &p_name, const Array &p_args) {
+	if (!state) {
+		return _result(false, "Could not create Lua state", -1, "runtime");
+	}
+	CharString function_name = p_name.utf8();
+	lua_getglobal(state, function_name.get_data());
+	if (!lua_isfunction(state, -1)) {
+		lua_pop(state, 1);
+		return _result(true);
+	}
+	for (int i = 0; i < p_args.size(); i++) {
+		_push_variant_to_lua(state, p_args[i]);
+	}
+	remaining_instructions = instruction_budget;
+	lua_sethook(state, _instruction_hook, LUA_MASKCOUNT, LUA_HOOK_GRANULARITY);
+	const int status = lua_pcall(state, p_args.size(), 0, 0);
+	lua_sethook(state, nullptr, 0, 0);
+	if (status != LUA_OK) {
+		const String error = _stack_error(state);
+		const int line = _line_from_error(error, last_source_name);
+		ERR_PRINT(vformat("Lua callback '%s' failed: %s", p_name, error));
+		lua_settop(state, 0);
+		return _result(false, error, line, "runtime");
+	}
+	lua_settop(state, 0);
+	return _result(true);
 }
 
 Dictionary LuaRuntime::call_function(const String &p_name, double p_delta, bool p_pass_delta) {
