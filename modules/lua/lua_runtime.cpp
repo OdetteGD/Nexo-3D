@@ -3,6 +3,7 @@
 #include "core/io/file_access.h"
 #include "core/object/class_db.h"
 #include "core/string/ustring.h"
+#include "core/string/print_string.h"
 
 extern "C" {
 #include "lua.h"
@@ -38,6 +39,24 @@ int _line_from_error(const String &p_error, const String &p_source_name) {
         return -1;
     }
     return number.to_int();
+}
+
+int _nexo_log(lua_State *p_state) {
+    String message;
+    const int count = lua_gettop(p_state);
+    for (int i = 1; i <= count; i++) {
+        size_t length = 0;
+        const char *value = luaL_tolstring(p_state, i, &length);
+        if (i > 1) {
+            message += "  ";
+        }
+        if (value) {
+            message += String::utf8(value, (int)length);
+        }
+        lua_pop(p_state, 1);
+    }
+    print_line(String("[Lua] ") + message);
+    return 0;
 }
 
 String _stack_error(lua_State *p_state) {
@@ -93,6 +112,13 @@ void LuaRuntime::_create_state() {
     lua_setglobal(state, "load");
     lua_pushnil(state);
     lua_setglobal(state, "collectgarbage");
+
+    // A deliberately small engine bridge; add new capabilities only through reviewed bindings.
+    lua_newtable(state);
+    lua_pushcfunction(state, _nexo_log);
+    lua_setfield(state, -2, "log");
+    lua_setglobal(state, "Nexo");
+
     *static_cast<LuaRuntime **>(lua_getextraspace(state)) = this;
 }
 
