@@ -60,6 +60,7 @@ public:
 	Dictionary check_syntax(const String &p_source, const String &p_source_name = "res://script.lua");
 	Dictionary check_file(const String &p_path);
 	Dictionary execute_file(const String &p_path);
+	Dictionary call_function(const String &p_name, double p_delta = 0.0, bool p_pass_delta = false);
 	Dictionary execute_string(const String &p_source, const String &p_source_name = "res://script.lua");
 	void reset();
 	void set_target_node(Node *p_node);
