@@ -99,4 +99,3 @@ jobs:
           output="$(bin/godot.linuxbsd.editor.x86_64 --headless --path tests/lua_editor_smoke --quit-after 2 2>&1)"
           printf '%s\n' "$output"
           printf '%s' "$output" | grep -F 'LUA_EDITOR_SMOKE_READY'
-
