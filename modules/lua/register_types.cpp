@@ -112,5 +112,12 @@ void initialize_lua_module(ModuleInitializationLevel p_level) {
 }
 
 void uninitialize_lua_module(ModuleInitializationLevel p_level) {
-	(void)p_level;
+	if (p_level == MODULE_INITIALIZATION_LEVEL_SERVERS) {
+		ScriptServer::unregister_language(LuaScriptLanguage::get_singleton());
+		ResourceLoader::remove_resource_format_loader(lua_resource_loader);
+		ResourceSaver::remove_resource_format_saver(lua_resource_saver);
+		lua_resource_loader.unref();
+		lua_resource_saver.unref();
+		memdelete(LuaScriptLanguage::get_singleton());
+	}
 }
