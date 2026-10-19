@@ -1,0 +1,101 @@
+name: Lua scripting and Android build
+
+on:
+  push:
+    branches:
+      - feature/lua-scripting-foundation
+  pull_request:
+    branches:
+      - feature/lua-scripting-foundation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lua-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lua-module-and-source-check:
+    name: Lua module and source checks
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install scons
+
+      - name: Verify Lua module sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f modules/lua/SCsub
+          test -f modules/lua/README.md
+          test -d thirdparty/lua
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("modules/lua")
+          files = list(p.rglob("*.cpp")) + list(p.rglob("*.h"))
+          assert files, "No Lua module C++ sources found"
+          print(f"Found {len(files)} Lua module C++ source/header files")
+          PY
+
+      - name: Build Linux editor (compile integration)
+        run: scons platform=linuxbsd target=editor dev_build=yes -j2
+
+  android-template:
+    name: Android arm64 release template
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install SCons
+        run: python -m pip install --upgrade scons
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;27.2.12479018"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+
+      - name: Build Android arm64 release template
+        run: |
+          scons platform=android target=template_release arch=arm64 -j2
+
+      - name: Upload Android shared library artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexo-3d-android-arm64-template
+          path: |
+            bin/android/*.android.template_release.arm64.so
+            bin/android/*.android.template_release.arm64
+          if-no-files-found: error
+          retention-days: 14
