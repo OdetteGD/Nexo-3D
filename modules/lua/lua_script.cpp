@@ -6,6 +6,7 @@
 #include "core/error/error_macros.h"
 #include "core/object/class_db.h"
 #include "core/object/object.h"
+#include "core/io/resource_loader.h"
 #include "scene/main/node.h"
 
 LuaScriptLanguage *LuaScriptLanguage::singleton = nullptr;
@@ -80,6 +81,27 @@ void LuaScript::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_source_code", "source"), &LuaScript::set_source_code);
 	ClassDB::bind_method(D_METHOD("get_source_code"), &LuaScript::get_source_code);
 	ClassDB::bind_method(D_METHOD("reload", "keep_state"), &LuaScript::reload, DEFVAL(false));
+}
+
+Ref<Script> LuaScript::get_base_script() const {
+	const PackedStringArray lines = source_code.split("\n");
+	for (int i = 0; i < lines.size(); i++) {
+		String line = lines[i].strip_edges();
+		if (!line.begins_with("-- @extends ")) continue;
+		String path = line.substr(String("-- @extends ").length()).strip_edges();
+		if (path.is_empty()) return Ref<Script>();
+		Ref<LuaScript> base = ResourceLoader::load(path, "LuaScript");
+		if (base.is_valid() && base.ptr() != this && base->is_script_valid()) return base;
+		return Ref<Script>();
+	}
+	return Ref<Script>();
+}
+
+bool LuaScript::inherits_script(const Ref<Script> &p_script) const {
+	if (p_script.ptr() == this) return true;
+	Ref<Script> base = get_base_script();
+	if (base.is_null() || base.ptr() == this) return false;
+	return base->inherits_script(p_script);
 }
 
 void LuaScript::set_source_code(const String &p_code) {
@@ -297,8 +319,17 @@ LuaScriptInstance::LuaScriptInstance(LuaScript *p_script, Object *p_owner) {
 	owner = p_owner;
 	runtime.instantiate();
 	runtime->set_target_node(Object::cast_to<Node>(owner));
-	Dictionary result = runtime->execute_string(script->get_source_code(), script->get_path().is_empty() ? "res://script.lua" : script->get_path());
-	loaded = bool(result.get("ok", false));
+	bool base_loaded = true;
+	Ref<Script> base_resource = script->get_base_script();
+	if (base_resource.is_valid()) {
+		Ref<LuaScript> base_script = base_resource;
+		if (base_script.is_valid()) {
+			Dictionary base_result = runtime->execute_string(base_script->get_source_code(), base_script->get_path().is_empty() ? "res://base.lua" : base_script->get_path());
+			base_loaded = bool(base_result.get("ok", false));
+		}
+	}
+	Dictionary result = base_loaded ? runtime->execute_string(script->get_source_code(), script->get_path().is_empty() ? "res://script.lua" : script->get_path()) : Dictionary();
+	loaded = base_loaded && bool(result.get("ok", false));
 	if (loaded) {
 		Array exports = _lua_export_declarations(script->get_source_code());
 		for (int i = 0; i < exports.size(); i++) {
