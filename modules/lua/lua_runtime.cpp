@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  lua_runtime.cpp                                                     */
+/*  lua_runtime.cpp                                                             */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -27,23 +27,24 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
+
 #include "lua_runtime.h"
 
-#include "core/io/file_access.h"
 #include "core/error/error_macros.h"
+#include "core/io/file_access.h"
+#include "core/io/resource_loader.h"
 #include "core/object/class_db.h"
 #include "core/object/object_db.h"
-#include "core/io/resource_loader.h"
+#include "core/string/print_string.h"
+#include "core/string/ustring.h"
+#include "scene/3d/node_3d.h"
 #include "scene/main/node.h"
 #include "scene/main/scene_tree.h"
 #include "scene/resources/packed_scene.h"
-#include "scene/3d/node_3d.h"
-#include "core/string/ustring.h"
-#include "core/string/print_string.h"
 
 extern "C" {
-#include "lua.h"
 #include "lauxlib.h"
+#include "lua.h"
 #include "lualib.h"
 }
 
@@ -93,7 +94,9 @@ int _nexo_select_node(lua_State *p_state) {
 int _nexo_set_position(lua_State *p_state) {
 	LuaRuntime *runtime = _runtime(p_state);
 	Node3D *node = runtime ? Object::cast_to<Node3D>(runtime->get_target_node()) : nullptr;
-	if (!node) return luaL_error(p_state, "Nexo.node.set_position requires a selected Node3D");
+	if (!node) {
+		return luaL_error(p_state, "Nexo.node.set_position requires a selected Node3D");
+	}
 	Vector3 position((real_t)luaL_checknumber(p_state, 1), (real_t)luaL_checknumber(p_state, 2), (real_t)luaL_checknumber(p_state, 3));
 	node->set_position(position);
 	return 0;
@@ -102,7 +105,9 @@ int _nexo_set_position(lua_State *p_state) {
 int _nexo_translate(lua_State *p_state) {
 	LuaRuntime *runtime = _runtime(p_state);
 	Node3D *node = runtime ? Object::cast_to<Node3D>(runtime->get_target_node()) : nullptr;
-	if (!node) return luaL_error(p_state, "Nexo.node.translate requires a selected Node3D");
+	if (!node) {
+		return luaL_error(p_state, "Nexo.node.translate requires a selected Node3D");
+	}
 	node->translate(Vector3((real_t)luaL_checknumber(p_state, 1), (real_t)luaL_checknumber(p_state, 2), (real_t)luaL_checknumber(p_state, 3)));
 	return 0;
 }
@@ -110,7 +115,9 @@ int _nexo_translate(lua_State *p_state) {
 int _nexo_rotate_y(lua_State *p_state) {
 	LuaRuntime *runtime = _runtime(p_state);
 	Node3D *node = runtime ? Object::cast_to<Node3D>(runtime->get_target_node()) : nullptr;
-	if (!node) return luaL_error(p_state, "Nexo.node.rotate_y requires a selected Node3D");
+	if (!node) {
+		return luaL_error(p_state, "Nexo.node.rotate_y requires a selected Node3D");
+	}
 	node->rotate_y((real_t)luaL_checknumber(p_state, 1));
 	return 0;
 }
@@ -118,7 +125,9 @@ int _nexo_rotate_y(lua_State *p_state) {
 int _nexo_set_visible(lua_State *p_state) {
 	LuaRuntime *runtime = _runtime(p_state);
 	Node3D *node = runtime ? Object::cast_to<Node3D>(runtime->get_target_node()) : nullptr;
-	if (!node) return luaL_error(p_state, "Nexo.node.set_visible requires a selected Node3D");
+	if (!node) {
+		return luaL_error(p_state, "Nexo.node.set_visible requires a selected Node3D");
+	}
 	node->set_visible(lua_toboolean(p_state, 1) != 0);
 	return 0;
 }
@@ -126,7 +135,9 @@ int _nexo_set_visible(lua_State *p_state) {
 int _nexo_get_position(lua_State *p_state) {
 	LuaRuntime *runtime = _runtime(p_state);
 	Node3D *node = runtime ? Object::cast_to<Node3D>(runtime->get_target_node()) : nullptr;
-	if (!node) return luaL_error(p_state, "Nexo.node.get_position requires a selected Node3D");
+	if (!node) {
+		return luaL_error(p_state, "Nexo.node.get_position requires a selected Node3D");
+	}
 	const Vector3 position = node->get_position();
 	lua_pushnumber(p_state, position.x);
 	lua_pushnumber(p_state, position.y);
@@ -138,11 +149,15 @@ int _nexo_add_scene(lua_State *p_state) {
 	LuaRuntime *runtime = _runtime(p_state);
 	Node *parent = runtime ? runtime->get_target_node() : nullptr;
 	const char *raw_path = luaL_checkstring(p_state, 1);
-	if (!parent) return luaL_error(p_state, "Nexo.scene.add_child requires a selected parent node");
+	if (!parent) {
+		return luaL_error(p_state, "Nexo.scene.add_child requires a selected parent node");
+	}
 	Ref<PackedScene> packed = ResourceLoader::load(String::utf8(raw_path), "PackedScene");
 	if (packed.is_null()) return luaL_error(p_state, "Nexo.scene.add_child could not load PackedScene");
 	Node *instance = packed->instantiate();
-	if (!instance) return luaL_error(p_state, "Nexo.scene.add_child failed to instantiate scene");
+	if (!instance) {
+		return luaL_error(p_state, "Nexo.scene.add_child failed to instantiate scene");
+	}
 	parent->add_child(instance);
 	lua_pushstring(p_state, instance->get_name().utf8().get_data());
 	return 1;
@@ -153,11 +168,15 @@ int _nexo_change_scene(lua_State *p_state) {
 	LuaRuntime *runtime = _runtime(p_state);
 	Node *target = runtime ? runtime->get_target_node() : nullptr;
 	SceneTree *tree = target ? target->get_tree() : nullptr;
-	if (!tree) return luaL_error(p_state, "Nexo.scene.change requires an active SceneTree");
+	if (!tree) {
+		return luaL_error(p_state, "Nexo.scene.change requires an active SceneTree");
+	}
 	Ref<PackedScene> packed = ResourceLoader::load(String::utf8(raw_path), "PackedScene");
 	if (packed.is_null()) return luaL_error(p_state, "Nexo.scene.change could not load PackedScene");
 	const Error err = tree->change_scene_to_packed(packed);
-	if (err != OK) return luaL_error(p_state, "Nexo.scene.change failed with error %d", (int)err);
+	if (err != OK) {
+		return luaL_error(p_state, "Nexo.scene.change failed with error %d", (int)err);
+	}
 	return 0;
 }
 
