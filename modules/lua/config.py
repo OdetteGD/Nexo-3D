@@ -8,7 +8,7 @@ def configure(env):
 
 
 def get_doc_classes():
-    return ["LuaRuntime", "LuaScriptRunner"]
+    return ["LuaRuntime", "LuaScript", "LuaScriptRunner"]
 
 
 def get_doc_path():
