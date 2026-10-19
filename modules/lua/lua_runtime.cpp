@@ -2,6 +2,13 @@
 
 #include "core/io/file_access.h"
 #include "core/object/class_db.h"
+#include "core/object/object_db.h"
+#include "core/config/engine.h"
+#include "core/io/resource_loader.h"
+#include "scene/main/node.h"
+#include "scene/main/scene_tree.h"
+#include "scene/resources/packed_scene.h"
+#include "scene/3d/node_3d.h"
 #include "core/string/ustring.h"
 #include "core/string/print_string.h"
 
@@ -41,6 +48,88 @@ int _line_from_error(const String &p_error, const String &p_source_name) {
     return number.to_int();
 }
 
+LuaRuntime *_runtime(lua_State *p_state) {
+    return *static_cast<LuaRuntime **>(lua_getextraspace(p_state));
+}
+
+int _nexo_select_node(lua_State *p_state) {
+    LuaRuntime *runtime = _runtime(p_state);
+    const char *path = luaL_checkstring(p_state, 1);
+    if (!runtime || !runtime->select_node(NodePath(String::utf8(path)))) {
+        return luaL_error(p_state, "Nexo.node.select: node path was not found");
+    }
+    return 0;
+}
+
+int _nexo_set_position(lua_State *p_state) {
+    LuaRuntime *runtime = _runtime(p_state);
+    Node3D *node = runtime ? Object::cast_to<Node3D>(runtime->get_target_node()) : nullptr;
+    if (!node) return luaL_error(p_state, "Nexo.node.set_position requires a selected Node3D");
+    Vector3 position((real_t)luaL_checknumber(p_state, 1), (real_t)luaL_checknumber(p_state, 2), (real_t)luaL_checknumber(p_state, 3));
+    node->set_position(position);
+    return 0;
+}
+
+int _nexo_translate(lua_State *p_state) {
+    LuaRuntime *runtime = _runtime(p_state);
+    Node3D *node = runtime ? Object::cast_to<Node3D>(runtime->get_target_node()) : nullptr;
+    if (!node) return luaL_error(p_state, "Nexo.node.translate requires a selected Node3D");
+    node->translate(Vector3((real_t)luaL_checknumber(p_state, 1), (real_t)luaL_checknumber(p_state, 2), (real_t)luaL_checknumber(p_state, 3)));
+    return 0;
+}
+
+int _nexo_rotate_y(lua_State *p_state) {
+    LuaRuntime *runtime = _runtime(p_state);
+    Node3D *node = runtime ? Object::cast_to<Node3D>(runtime->get_target_node()) : nullptr;
+    if (!node) return luaL_error(p_state, "Nexo.node.rotate_y requires a selected Node3D");
+    node->rotate_y((real_t)luaL_checknumber(p_state, 1));
+    return 0;
+}
+
+int _nexo_set_visible(lua_State *p_state) {
+    LuaRuntime *runtime = _runtime(p_state);
+    Node3D *node = runtime ? Object::cast_to<Node3D>(runtime->get_target_node()) : nullptr;
+    if (!node) return luaL_error(p_state, "Nexo.node.set_visible requires a selected Node3D");
+    node->set_visible(lua_toboolean(p_state, 1) != 0);
+    return 0;
+}
+
+int _nexo_get_position(lua_State *p_state) {
+    LuaRuntime *runtime = _runtime(p_state);
+    Node3D *node = runtime ? Object::cast_to<Node3D>(runtime->get_target_node()) : nullptr;
+    if (!node) return luaL_error(p_state, "Nexo.node.get_position requires a selected Node3D");
+    const Vector3 position = node->get_position();
+    lua_pushnumber(p_state, position.x);
+    lua_pushnumber(p_state, position.y);
+    lua_pushnumber(p_state, position.z);
+    return 3;
+}
+
+int _nexo_add_scene(lua_State *p_state) {
+    LuaRuntime *runtime = _runtime(p_state);
+    Node *parent = runtime ? runtime->get_target_node() : nullptr;
+    const char *raw_path = luaL_checkstring(p_state, 1);
+    if (!parent) return luaL_error(p_state, "Nexo.scene.add_child requires a selected parent node");
+    Ref<PackedScene> packed = ResourceLoader::load(String::utf8(raw_path), "PackedScene");
+    if (packed.is_null()) return luaL_error(p_state, "Nexo.scene.add_child could not load PackedScene");
+    Node *instance = packed->instantiate();
+    if (!instance) return luaL_error(p_state, "Nexo.scene.add_child failed to instantiate scene");
+    parent->add_child(instance);
+    lua_pushstring(p_state, instance->get_name().utf8().get_data());
+    return 1;
+}
+
+int _nexo_change_scene(lua_State *p_state) {
+    const char *raw_path = luaL_checkstring(p_state, 1);
+    SceneTree *tree = Object::cast_to<SceneTree>(Engine::get_singleton()->get_main_loop());
+    if (!tree) return luaL_error(p_state, "Nexo.scene.change requires an active SceneTree");
+    Ref<PackedScene> packed = ResourceLoader::load(String::utf8(raw_path), "PackedScene");
+    if (packed.is_null()) return luaL_error(p_state, "Nexo.scene.change could not load PackedScene");
+    const Error err = tree->change_scene_to_packed(packed);
+    if (err != OK) return luaL_error(p_state, "Nexo.scene.change failed with error %d", (int)err);
+    return 0;
+}
+
 int _nexo_log(lua_State *p_state) {
     String message;
     const int count = lua_gettop(p_state);
@@ -71,6 +160,9 @@ void LuaRuntime::_bind_methods() {
     ClassDB::bind_method(D_METHOD("check_file", "path"), &LuaRuntime::check_file);
     ClassDB::bind_method(D_METHOD("execute_file", "path"), &LuaRuntime::execute_file);
     ClassDB::bind_method(D_METHOD("reset"), &LuaRuntime::reset);
+    ClassDB::bind_method(D_METHOD("set_target_node", "node"), &LuaRuntime::set_target_node);
+    ClassDB::bind_method(D_METHOD("get_target_node"), &LuaRuntime::get_target_node);
+    ClassDB::bind_method(D_METHOD("select_node", "path"), &LuaRuntime::select_node);
     ClassDB::bind_method(D_METHOD("set_instruction_budget", "instructions"), &LuaRuntime::set_instruction_budget);
     ClassDB::bind_method(D_METHOD("get_instruction_budget"), &LuaRuntime::get_instruction_budget);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "instruction_budget", PROPERTY_HINT_RANGE, "1000,100000000,1000"), "set_instruction_budget", "get_instruction_budget");
@@ -117,6 +209,28 @@ void LuaRuntime::_create_state() {
     lua_newtable(state);
     lua_pushcfunction(state, _nexo_log);
     lua_setfield(state, -2, "log");
+
+    lua_newtable(state);
+    lua_pushcfunction(state, _nexo_select_node);
+    lua_setfield(state, -2, "select");
+    lua_pushcfunction(state, _nexo_set_position);
+    lua_setfield(state, -2, "set_position");
+    lua_pushcfunction(state, _nexo_translate);
+    lua_setfield(state, -2, "translate");
+    lua_pushcfunction(state, _nexo_rotate_y);
+    lua_setfield(state, -2, "rotate_y");
+    lua_pushcfunction(state, _nexo_set_visible);
+    lua_setfield(state, -2, "set_visible");
+    lua_pushcfunction(state, _nexo_get_position);
+    lua_setfield(state, -2, "get_position");
+    lua_setfield(state, -2, "node");
+
+    lua_newtable(state);
+    lua_pushcfunction(state, _nexo_add_scene);
+    lua_setfield(state, -2, "add_child");
+    lua_pushcfunction(state, _nexo_change_scene);
+    lua_setfield(state, -2, "change");
+    lua_setfield(state, -2, "scene");
     lua_setglobal(state, "Nexo");
 
     *static_cast<LuaRuntime **>(lua_getextraspace(state)) = this;
@@ -204,6 +318,23 @@ Dictionary LuaRuntime::execute_file(const String &p_path) {
         return _result(false, "Unable to open Lua file: " + p_path, -1, "io");
     }
     return execute_string(file->get_as_text(), p_path);
+}
+
+void LuaRuntime::set_target_node(Node *p_node) {
+    target_node_id = p_node ? p_node->get_instance_id() : ObjectID();
+}
+
+Node *LuaRuntime::get_target_node() const {
+    return Object::cast_to<Node>(ObjectDB::get_instance(target_node_id));
+}
+
+bool LuaRuntime::select_node(const NodePath &p_path) {
+    Node *root = get_target_node();
+    if (!root) return false;
+    Node *selected = root->get_node_or_null(p_path);
+    if (!selected) return false;
+    target_node_id = selected->get_instance_id();
+    return true;
 }
 
 void LuaRuntime::reset() {
