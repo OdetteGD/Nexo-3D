@@ -179,6 +179,52 @@ int _nexo_change_scene(lua_State *p_state) {
 	return 0;
 }
 
+int _nexo_signal_emit(lua_State *p_state) {
+	LuaRuntime *runtime = _runtime(p_state);
+	Node *node = runtime ? runtime->get_target_node() : nullptr;
+	const char *raw_name = luaL_checkstring(p_state, 1);
+	if (!node) return luaL_error(p_state, "Nexo.signal.emit requires a live target Node");
+	const StringName signal_name(String::utf8(raw_name));
+	if (!node->has_signal(signal_name)) return luaL_error(p_state, "Nexo.signal.emit: signal is not declared on the target Node");
+	Array args;
+	args.push_back(signal_name);
+	for (int i = 2; i <= lua_gettop(p_state); i++) {
+		switch (lua_type(p_state, i)) {
+			case LUA_TNIL: args.push_back(Variant()); break;
+			case LUA_TBOOLEAN: args.push_back(lua_toboolean(p_state, i) != 0); break;
+			case LUA_TNUMBER:
+				if (lua_isinteger(p_state, i)) args.push_back((int64_t)lua_tointeger(p_state, i));
+				else args.push_back((double)lua_tonumber(p_state, i));
+				break;
+			case LUA_TSTRING: args.push_back(String::utf8(lua_tostring(p_state, i))); break;
+			case LUA_TTABLE: {
+				const int table = lua_absindex(p_state, i);
+				lua_getfield(p_state, table, "x");
+				const bool has_x = !lua_isnil(p_state, -1);
+				const double x = lua_tonumber(p_state, -1);
+				lua_pop(p_state, 1);
+				lua_getfield(p_state, table, "y");
+				const bool has_y = !lua_isnil(p_state, -1);
+				const double y = lua_tonumber(p_state, -1);
+				lua_pop(p_state, 1);
+				lua_getfield(p_state, table, "z");
+				const bool has_z = !lua_isnil(p_state, -1);
+				const double z = lua_tonumber(p_state, -1);
+				lua_pop(p_state, 1);
+				if (has_x && has_y && has_z) args.push_back(Vector3((real_t)x, (real_t)y, (real_t)z));
+				else if (has_x && has_y) args.push_back(Vector2((real_t)x, (real_t)y));
+				else args.push_back(Variant());
+			} break;
+			default: args.push_back(Variant()); break;
+		}
+	}
+	const Variant emitted = node->callv("emit_signal", args);
+	if (emitted.get_type() == Variant::INT && (int)emitted != (int)OK) {
+		return luaL_error(p_state, "Nexo.signal.emit failed to emit signal");
+	}
+	return 0;
+}
+
 int _nexo_log(lua_State *p_state) {
 	String message;
 	const int count = lua_gettop(p_state);
@@ -284,6 +330,11 @@ void LuaRuntime::_create_state() {
 	lua_pushcfunction(state, _nexo_change_scene);
 	lua_setfield(state, -2, "change");
 	lua_setfield(state, -2, "scene");
+
+	lua_newtable(state);
+	lua_pushcfunction(state, _nexo_signal_emit);
+	lua_setfield(state, -2, "emit");
+	lua_setfield(state, -2, "signal");
 	lua_setglobal(state, "Nexo");
 
 	*static_cast<LuaRuntime **>(lua_getextraspace(state)) = this;
