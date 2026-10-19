@@ -213,8 +213,9 @@ Variant LuaScriptInstance::callp(const StringName &p_method, const Variant **p_a
 	Dictionary result = runtime->call_function_args(String(p_method), args);
 	if (!bool(result.get("ok", false))) {
 		r_error.error = Callable::CallError::CALL_ERROR_INVALID_METHOD;
+		return Variant();
 	}
-	return Variant();
+	return result.get("value", Variant());
 }
 
 void LuaScriptInstance::notification(int p_notification, bool p_reversed) {
