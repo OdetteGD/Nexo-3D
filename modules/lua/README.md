@@ -21,6 +21,8 @@ Nexo-3D vendors **Lua 5.4.8** under `thirdparty/lua` (MIT license), built throug
 - Lua callback return conversion back into Godot `Variant` values for nil, booleans, integers, floats, strings, `Vector2`, `Vector3`, Lua sequence tables (`Array`), and string/integer-keyed Lua tables (`Dictionary`). Nested table conversion is depth-limited.
 - Inspector properties declared with comment annotations such as `-- @export speed: float = 2.5`; supported types are `int`, `float`/`number`, `bool`/`boolean`, `string`, `Vector2`, and `Vector3`.
 - Custom script signal metadata declared with `-- @signal health_changed(amount: int)` and guarded emission through `Nexo.signal.emit("health_changed", amount)`; emission checks that the signal exists on the target Node.
+- Script inheritance through `-- @extends res://base.lua`; the base source executes first in the same Lua state, then derived definitions override same-named globals.
+- Object arguments, including InputEvents, are exposed only as snapshots of allowlisted properties (class name, pressed/key/button fields and positions), not as raw pointers or unrestricted Object userdata.
 
 ## Pure Lua scene setup
 
@@ -33,7 +35,7 @@ Nexo-3D vendors **Lua 5.4.8** under `thirdparty/lua` (MIT license), built throug
 
 ## Remaining integration work
 
-`.lua` is registered as a native `Script` resource and is intended to be attachable through Godot’s script workflow. This implementation is still not feature-parity with GDScript: script inheritance, complete editor semantic completion, parser diagnostics in the Script Editor Problems panel, breakpoints and step-through debugging, source-mapped stack frames, safe Object/InputEvent userdata bindings, and broad Node/Object/Input APIs need additional implementation and validation. Exported properties and custom signals are currently annotation-based and require editor/runtime validation. Callback argument conversion currently supports nil, booleans, integers, floats, strings, `Vector2`, and `Vector3`; other Variant types are passed as `nil` until safe conversions are implemented. The highlighter is lexical, while parser errors are returned by `check_syntax`. The instruction budget limits Lua VM instructions, not time spent in native engine calls. Treat scripts as trusted project code and expose only reviewed bindings.
+`.lua` is registered as a native `Script` resource and is intended to be attachable through Godot’s script workflow. This implementation is still not feature-parity with GDScript: complete editor semantic completion, parser diagnostics in the Script Editor Problems panel, actual breakpoints and step-through debugging, source-mapped stack frames, broader Node/Object/Input APIs, and full parity with Godot's debugger need additional implementation and validation. Exported properties and custom signals are currently annotation-based and require editor/runtime validation. Callback argument conversion currently supports nil, booleans, integers, floats, strings, `Vector2`, and `Vector3`; other Variant types are passed as `nil` until safe conversions are implemented. The highlighter is lexical, while parser errors are returned by `check_syntax`. The instruction budget limits Lua VM instructions, not time spent in native engine calls. Treat scripts as trusted project code and expose only reviewed bindings.
 
 ## Compatibility
 
@@ -62,6 +64,19 @@ end
 
 The annotation creates an Inspector property backed by the matching Lua global. This is a deliberately small first format; it is not a Lua type declaration and only the listed types are supported.
 
+
+
+Inheritance can be declared in a derived script:
+
+```lua
+-- @extends res://scripts/base.lua
+
+function _ready()
+    Nexo.log("Derived ready; base globals are available")
+end
+```
+
+The base script runs before the derived source in the same runtime, so derived top-level function definitions replace base functions of the same name. This initial form does not yet merge inherited Inspector property metadata or provide native debugger stepping.
 
 Custom signals use this annotation format:
 
