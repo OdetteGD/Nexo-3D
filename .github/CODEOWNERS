@@ -522,3 +522,6 @@
 
 /thirdparty/                                  @godotengine/buildsystem
 /thirdparty/jolt_physics/                     @godotengine/buildsystem @godotengine/jolt-physics
+
+# Lua scripting runtime and editor integration.
+/modules/lua/                                  @godotengine/gdscript @godotengine/editor @godotengine/buildsystem
