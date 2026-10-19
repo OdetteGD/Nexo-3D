@@ -47,6 +47,7 @@ class LuaRuntime : public RefCounted {
 	int instruction_budget = 1000000;
 	int remaining_instructions = 1000000;
 	ObjectID target_node_id;
+	String last_source_name = "res://script.lua";
 
 	static void _instruction_hook(lua_State *p_state, lua_Debug *p_debug);
 	void _create_state();
