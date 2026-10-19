@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  register_types.cpp                                                  */
+/*  register_types.cpp                                                          */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
+
 #include "register_types.h"
 
 #include "lua_runtime.h"
