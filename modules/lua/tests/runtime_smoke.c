@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  runtime_smoke.c                                                     */
+/*  runtime_smoke.c                                                       */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
+
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
