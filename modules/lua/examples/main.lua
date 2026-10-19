@@ -1,18 +1,12 @@
--- Pure Lua script attached through a LuaScriptRunner node.
--- Add a LuaScriptRunner node to your scene and set Script Path to this file.
--- This script does not require GDScript.
+-- Pure Lua gameplay script. Add a LuaScriptRunner child to your scene and set
+-- Script Path to res://modules/lua/examples/main.lua (or copy it to your project).
+-- No GDScript wrapper is required.
 
 function _ready()
     Nexo.log("Pure Lua script started!")
-    -- The runner itself is a Node. Select its parent if it is a Node3D.
-    if Nexo.node.select("..") then
-        Nexo.node.rotate_y(0.0)
-    end
 end
 
 function _process(delta)
-    -- Keep gameplay code in Lua; delta is seconds since the previous frame.
-    if Nexo.node.select("..") then
-        Nexo.node.rotate_y(delta * 0.5)
-    end
+    -- The runner targets its parent node. If that parent is a Node3D, rotate it.
+    Nexo.node.rotate_y(delta * 0.5)
 end
