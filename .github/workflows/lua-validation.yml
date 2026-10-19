@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "modules/lua/**"
+      - "thirdparty/lua/**"
       - ".github/workflows/lua-validation.yml"
   pull_request:
     paths:
@@ -41,3 +42,8 @@ jobs:
           fi
           cat lua-error.log
           grep -E 'syntax error|near' lua-error.log
+
+      - name: Build and smoke-test vendored Lua 5.4.8
+        run: |
+          cc -std=c99 -DLUA_USE_LINUX -Ithirdparty/lua thirdparty/lua/*.c modules/lua/tests/runtime_smoke.c -lm -ldl -o lua-runtime-smoke
+          ./lua-runtime-smoke
