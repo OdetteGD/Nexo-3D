@@ -9,6 +9,7 @@ on:
   pull_request:
     paths:
       - "modules/lua/**"
+      - "thirdparty/lua/**"
       - ".github/workflows/lua-validation.yml"
   workflow_dispatch:
 
