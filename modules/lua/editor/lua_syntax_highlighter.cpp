@@ -1,12 +1,9 @@
 #include "lua_syntax_highlighter.h"
 
-#include "scene/gui/text_edit.h"
 #include "core/templates/hash_set.h"
-
-#include <cctype>
+#include "scene/gui/text_edit.h"
 
 void LuaSyntaxHighlighter::_update_cache() {
-    // Colors are deliberately theme-neutral defaults; users can still switch editor themes.
 }
 
 Dictionary LuaSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_line) {
@@ -23,6 +20,7 @@ Dictionary LuaSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_line) 
     const Color number_color(0.55, 0.76, 0.96);
     const Color function_color(0.45, 0.82, 0.86);
     const Color builtin_color(0.96, 0.78, 0.43);
+    const Color default_color(0.86, 0.86, 0.86);
 
     const HashSet<String> keywords = {
         "and", "break", "do", "else", "elseif", "end", "false", "for",
@@ -30,10 +28,10 @@ Dictionary LuaSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_line) 
         "repeat", "return", "then", "true", "until", "while"
     };
     const HashSet<String> builtins = {
-        "assert", "collectgarbage", "error", "getmetatable", "ipairs",
-        "next", "pairs", "pcall", "print", "rawequal", "rawget", "rawlen",
-        "rawset", "select", "setmetatable", "tonumber", "tostring", "type",
-        "xpcall", "math", "string", "table", "utf8"
+        "assert", "error", "getmetatable", "ipairs", "next", "pairs",
+        "pcall", "print", "rawequal", "rawget", "rawlen", "rawset",
+        "select", "setmetatable", "tonumber", "tostring", "type", "xpcall",
+        "math", "string", "table", "utf8"
     };
 
     int i = 0;
@@ -45,10 +43,9 @@ Dictionary LuaSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_line) 
         }
         if (ch == '"' || ch == '\'') {
             const char32_t quote = ch;
-            colors[i] = string_color;
-            i++;
+            const int start = i++;
             while (i < length) {
-                if (line[i] == '\\\\') {
+                if (line[i] == '\\') {
                     i += MIN(2, length - i);
                     continue;
                 }
@@ -58,17 +55,26 @@ Dictionary LuaSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_line) 
                 }
                 i++;
             }
+            colors[start] = string_color;
+            colors[i] = default_color;
             continue;
         }
         if ((ch >= '0' && ch <= '9') || (ch == '.' && i + 1 < length && line[i + 1] >= '0' && line[i + 1] <= '9')) {
-            colors[i] = number_color;
-            i++;
-            while (i < length && ((line[i] >= '0' && line[i] <= '9') || line[i] == '.' ||
-                    (line[i] >= 'a' && line[i] <= 'f') || (line[i] >= 'A' && line[i] <= 'F') ||
-                    line[i] == 'x' || line[i] == 'X' || line[i] == 'e' || line[i] == 'E' ||
-                    line[i] == '+' || line[i] == '-')) {
-                i++;
+            const int start = i++;
+            while (i < length) {
+                const char32_t n = line[i];
+                const bool digit = n >= '0' && n <= '9';
+                const bool hex = (n >= 'a' && n <= 'f') || (n >= 'A' && n <= 'F');
+                const bool exponent_sign = (n == '+' || n == '-') && i > start &&
+                        (line[i - 1] == 'e' || line[i - 1] == 'E' || line[i - 1] == 'p' || line[i - 1] == 'P');
+                if (digit || n == '.' || hex || n == 'x' || n == 'X' || n == 'e' || n == 'E' || n == 'p' || n == 'P' || exponent_sign) {
+                    i++;
+                } else {
+                    break;
+                }
             }
+            colors[start] = number_color;
+            colors[i] = default_color;
             continue;
         }
         if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_') {
@@ -91,6 +97,9 @@ Dictionary LuaSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_line) 
                 if (next < length && line[next] == '(') {
                     colors[start] = function_color;
                 }
+            }
+            if (colors.has(start)) {
+                colors[i] = default_color;
             }
             continue;
         }
