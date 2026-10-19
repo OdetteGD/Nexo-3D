@@ -160,6 +160,28 @@ void LuaScript::get_script_method_list(List<MethodInfo> *r_list) const {
 	}
 }
 
+bool LuaScript::get_property_default_value(const StringName &p_property, Variant &r_value) const {
+	Array exports = _lua_export_declarations(source_code);
+	for (int i = 0; i < exports.size(); i++) {
+		Dictionary item = exports[i];
+		if (StringName(item["name"]) == p_property) {
+			r_value = item["default"];
+			return true;
+		}
+	}
+	return false;
+}
+
+void LuaScript::get_script_property_list(List<PropertyInfo> *r_list) const {
+	Array exports = _lua_export_declarations(source_code);
+	for (int i = 0; i < exports.size(); i++) {
+		Dictionary item = exports[i];
+		PropertyInfo property((Variant::Type)(int)item["type"], StringName(item["name"]));
+		property.usage |= PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_EDITOR;
+		r_list->push_back(property);
+	}
+}
+
 ScriptLanguage *LuaScript::get_language() const {
 	return LuaScriptLanguage::get_singleton();
 }
@@ -219,9 +241,65 @@ LuaScriptInstance::LuaScriptInstance(LuaScript *p_script, Object *p_owner) {
 	runtime->set_target_node(Object::cast_to<Node>(owner));
 	Dictionary result = runtime->execute_string(script->get_source_code(), script->get_path().is_empty() ? "res://script.lua" : script->get_path());
 	loaded = bool(result.get("ok", false));
+	if (loaded) {
+		Array exports = _lua_export_declarations(script->get_source_code());
+		for (int i = 0; i < exports.size(); i++) {
+			Dictionary item = exports[i];
+			String name = item["name"];
+			if (runtime->get_global_value(name).get_type() == Variant::NIL) {
+				runtime->set_global_value(name, item["default"]);
+			}
+		}
+	}
 	if (!loaded) {
 		ERR_PRINT(vformat("Could not execute attached Lua script: %s", String(result.get("error", "unknown error"))));
 	}
+}
+
+bool LuaScriptInstance::set(const StringName &p_name, const Variant &p_value) {
+	if (!loaded || runtime.is_null() || script.is_null()) return false;
+	Array exports = _lua_export_declarations(script->get_source_code());
+	for (int i = 0; i < exports.size(); i++) {
+		Dictionary item = exports[i];
+		if (StringName(item["name"]) == p_name) {
+			runtime->set_global_value(String(p_name), p_value);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool LuaScriptInstance::get(const StringName &p_name, Variant &r_ret) const {
+	if (!loaded || runtime.is_null() || script.is_null()) return false;
+	Array exports = _lua_export_declarations(script->get_source_code());
+	for (int i = 0; i < exports.size(); i++) {
+		Dictionary item = exports[i];
+		if (StringName(item["name"]) == p_name) {
+			r_ret = runtime->get_global_value(String(p_name));
+			if (r_ret.get_type() == Variant::NIL) r_ret = item["default"];
+			return true;
+		}
+	}
+	return false;
+}
+
+void LuaScriptInstance::get_property_list(List<PropertyInfo> *r_properties) const {
+	if (script.is_valid()) script->get_script_property_list(r_properties);
+}
+
+Variant::Type LuaScriptInstance::get_property_type(const StringName &p_name, bool *r_is_valid) const {
+	if (script.is_valid()) {
+		Array exports = _lua_export_declarations(script->get_source_code());
+		for (int i = 0; i < exports.size(); i++) {
+			Dictionary item = exports[i];
+			if (StringName(item["name"]) == p_name) {
+				if (r_is_valid) *r_is_valid = true;
+				return (Variant::Type)(int)item["type"];
+			}
+		}
+	}
+	if (r_is_valid) *r_is_valid = false;
+	return Variant::NIL;
 }
 
 void LuaScriptInstance::get_method_list(List<MethodInfo> *r_list) const {
