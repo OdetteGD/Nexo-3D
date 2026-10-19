@@ -17,27 +17,18 @@ Nexo-3D vendors **Lua 5.4.8** under `thirdparty/lua` (MIT license), built throug
 - `Nexo.scene.change("res://scene.tscn")`: request a change to the active SceneTree scene.
 - Lua editor syntax highlighter for keywords, strings, comments, numbers, built-ins, and function calls.
 
-## Example setup
+## Pure Lua scene setup
 
-Create a runtime and bind it to a Node3D from GDScript:
+1. Add a **LuaScriptRunner** node as a child of the node you want to control.
+2. Set its **Script Path** property to a project `.lua` file, such as `res://scripts/player.lua`.
+3. Define optional global `function _ready()` and `function _process(delta)` callbacks in Lua. The runner executes the file, then dispatches these callbacks from native C++—no GDScript wrapper is needed.
+4. The runner targets its parent node when one exists. `Nexo.node.rotate_y(delta)`, `set_position(x, y, z)`, `translate(x, y, z)`, and `set_visible(bool)` operate on a selected Node3D. Use `Nexo.node.select("Child/Path")` to select a child relative to the current target.
 
-```gdscript
-var lua := LuaRuntime.new()
-lua.set_target_node(self)
-var check := lua.check_file("res://scripts/control_3d_scene.lua")
-if not check.ok:
-    push_error("%s:%s: %s" % ["res://scripts/control_3d_scene.lua", check.line, check.error])
-else:
-    var result := lua.execute_file("res://scripts/control_3d_scene.lua")
-    if not result.ok:
-        push_error("%s: %s" % [result.kind, result.error])
-```
-
-See `examples/control_3d_scene.lua` for the supported node and scene bridge.
+`LuaScriptRunner` and Lua 5.4 are compiled as part of the engine module, including Android export templates when `module_lua_enabled=yes`. See `examples/main.lua` for a pure Lua lifecycle example and `examples/control_3d_scene.lua` for scene operations.
 
 ## Limitations still remaining
 
-This is not yet a full first-class Godot `ScriptLanguage` implementation. Creating/opening arbitrary `.lua` files as native attachable Script resources, automatic `_ready()` / `_process(delta)` lifecycle dispatch, live parser diagnostics in the Script Editor Problems panel, breakpoints/step-through debugging, source-mapped stack frames, and full SceneTree/Node/Object APIs still require dedicated integration work. The highlighter is lexical, while parser errors are returned by `check_syntax`. The instruction budget limits Lua VM instructions, not time spent in native engine calls. Treat scripts as trusted project code and expose only reviewed bindings.
+This is a native C++ runner for pure Lua gameplay, but **not yet a full first-class Godot `ScriptLanguage` implementation**. `.lua` files are selected through the LuaScriptRunner inspector property rather than Godot’s built-in New Script / attach-script flow. Native Script resource integration, live parser diagnostics in the Script Editor Problems panel, breakpoints/step-through debugging, source-mapped stack frames, and broader SceneTree/Node/Object/Input APIs still require dedicated integration work. The highlighter is lexical, while parser errors are returned by `check_syntax`. The instruction budget limits Lua VM instructions, not time spent in native engine calls. Treat scripts as trusted project code and expose only reviewed bindings.
 
 ## Compatibility
 
