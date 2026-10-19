@@ -202,15 +202,18 @@ int LuaScriptInstance::get_method_argument_count(const StringName &p_method, boo
 
 Variant LuaScriptInstance::callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
 	r_error.error = Callable::CallError::CALL_OK;
-	if (!loaded || runtime.is_null()) return Variant();
-	Dictionary result;
-	if (p_method == SNAME("_process") || p_method == SNAME("_physics_process")) {
-		const double delta = p_argcount > 0 && p_args[0] ? (double)*p_args[0] : 0.0;
-		result = runtime->call_function(String(p_method), delta, true);
-	} else {
-		result = runtime->call_function(String(p_method));
+	if (!loaded || runtime.is_null()) {
+		r_error.error = Callable::CallError::CALL_ERROR_INSTANCE_IS_NULL;
+		return Variant();
 	}
-	if (!bool(result.get("ok", false))) r_error.error = Callable::CallError::CALL_ERROR_INVALID_METHOD;
+	Array args;
+	for (int i = 0; i < p_argcount; i++) {
+		args.push_back(p_args[i] ? *p_args[i] : Variant());
+	}
+	Dictionary result = runtime->call_function_args(String(p_method), args);
+	if (!bool(result.get("ok", false))) {
+		r_error.error = Callable::CallError::CALL_ERROR_INVALID_METHOD;
+	}
 	return Variant();
 }
 
