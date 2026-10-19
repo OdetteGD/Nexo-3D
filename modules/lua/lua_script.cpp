@@ -10,6 +10,26 @@
 
 LuaScriptLanguage *LuaScriptLanguage::singleton = nullptr;
 
+static Array _lua_signal_declarations(const String &p_source) {
+	Array signals;
+	const PackedStringArray lines = p_source.split("\n");
+	for (int i = 0; i < lines.size(); i++) {
+		String line = lines[i].strip_edges();
+		if (!line.begins_with("-- @signal ")) continue;
+		String declaration = line.substr(String("-- @signal ").length()).strip_edges();
+		const int paren = declaration.find("(");
+		if (paren <= 0 || !declaration.ends_with(")")) continue;
+		String name = declaration.substr(0, paren).strip_edges();
+		if (name.contains(" ") || name.contains(".") || name.contains(":")) continue;
+		bool duplicate = false;
+		for (int j = 0; j < signals.size(); j++) {
+			if (String(signals[j]).begins_with(name + "(")) duplicate = true;
+		}
+		if (!duplicate) signals.push_back(declaration);
+	}
+	return signals;
+}
+
 static Array _lua_export_declarations(const String &p_source) {
 	Array exports;
 	const PackedStringArray lines = p_source.split("\n");
@@ -157,6 +177,44 @@ void LuaScript::get_script_method_list(List<MethodInfo> *r_list) const {
 		if (!added.has(method_name)) {
 			r_list->push_back(get_method_info(method_name));
 		}
+	}
+}
+
+bool LuaScript::has_script_signal(const StringName &p_signal) const {
+	Array signals = _lua_signal_declarations(source_code);
+	for (int i = 0; i < signals.size(); i++) {
+		String declaration = signals[i];
+		if (declaration.begins_with(String(p_signal) + "(")) return true;
+	}
+	return false;
+}
+
+void LuaScript::get_script_signal_list(List<MethodInfo> *r_signals) const {
+	Array signals = _lua_signal_declarations(source_code);
+	for (int i = 0; i < signals.size(); i++) {
+		String declaration = signals[i];
+		const int paren = declaration.find("(");
+		MethodInfo info;
+		info.name = declaration.substr(0, paren);
+		String args_text = declaration.substr(paren + 1, declaration.length() - paren - 2).strip_edges();
+		if (!args_text.is_empty()) {
+			PackedStringArray args = args_text.split(",");
+			for (int j = 0; j < args.size(); j++) {
+				String arg = args[j].strip_edges();
+				const int colon = arg.find(":");
+				String arg_name = colon >= 0 ? arg.substr(0, colon).strip_edges() : arg;
+				String type_name = colon >= 0 ? arg.substr(colon + 1).strip_edges() : String();
+				Variant::Type type = Variant::NIL;
+				if (type_name == "int") type = Variant::INT;
+				else if (type_name == "float" || type_name == "number") type = Variant::FLOAT;
+				else if (type_name == "bool") type = Variant::BOOL;
+				else if (type_name == "string") type = Variant::STRING;
+				else if (type_name == "Vector2") type = Variant::VECTOR2;
+				else if (type_name == "Vector3") type = Variant::VECTOR3;
+				if (!arg_name.is_empty()) info.arguments.push_back(PropertyInfo(type, arg_name));
+			}
+		}
+		r_signals->push_back(info);
 	}
 }
 
