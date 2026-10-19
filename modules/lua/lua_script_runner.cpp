@@ -54,11 +54,19 @@ void LuaScriptRunner::_ready() {
 
 	script_loaded = true;
 	set_process(true);
-	runtime->call_function("_ready");
+	Dictionary ready_result = runtime->call_function("_ready");
+	if (!bool(ready_result.get("ok", false))) {
+		script_loaded = false;
+		set_process(false);
+	}
 }
 
 void LuaScriptRunner::_process(double p_delta) {
 	if (script_loaded) {
-		runtime->call_function("_process", p_delta, true);
+		Dictionary process_result = runtime->call_function("_process", p_delta, true);
+		if (!bool(process_result.get("ok", false))) {
+			script_loaded = false;
+			set_process(false);
+		}
 	}
 }
