@@ -10,4 +10,5 @@ env_lua.add_source_files(env.modules_sources, "*.cpp")
 
 if env.editor_build:
     env_lua.add_source_files(env.modules_sources, "editor/*.cpp")
-env_lua.add_source_files(env.modules_sources, "#thirdparty/lua/*.c")
+lua_sources = [source for source in Glob("#thirdparty/lua/*.c") if source.name not in ("lua.c", "luac.c")]
+env_lua.add_source_files(env.modules_sources, lua_sources)
