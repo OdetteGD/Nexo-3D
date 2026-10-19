@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="LuaScript" inherits="Script">
+  <brief_description>Native Lua script resource attachable to Godot Node objects.</brief_description>
+  <description>LuaScript stores Lua source, validates it with the embedded Lua runtime, and invokes supported Node lifecycle callbacks such as _enter_tree, _ready, _process, _physics_process, and _exit_tree. Lua scripts use the restricted Nexo API exposed by LuaRuntime.</description>
+  <tutorials />
+  <methods>
+    <method name="get_source_code" qualifiers="const"><return type="String" /><description>Returns the Lua source code.</description></method>
+    <method name="set_source_code"><param index="0" name="source" type="String" /><description>Sets the Lua source code.</description></method>
+    <method name="reload"><return type="int" /><param index="0" name="keep_state" type="bool" default="false" /><description>Validates the current Lua source.</description></method>
+  </methods>
+</class>

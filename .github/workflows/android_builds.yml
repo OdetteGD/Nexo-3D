@@ -7,11 +7,18 @@ on:
 
   workflow_dispatch:
 
+  pull_request:
+    paths:
+      - 'modules/lua/**'
+      - 'thirdparty/lua/**'
+      - '.github/workflows/android_builds.yml'
+
 # Global Settings
 env:
   SCONS_FLAGS: >-
     dev_mode=yes
     module_text_server_fb_enabled=yes
+    module_lua_enabled=yes
 
 jobs:
   build-android:

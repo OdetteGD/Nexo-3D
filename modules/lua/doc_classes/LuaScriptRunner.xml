@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="LuaScriptRunner" inherits="Node">
+  <brief_description>Runs a pure Lua gameplay script without requiring a GDScript wrapper.</brief_description>
+  <description>Attach this native Node to a scene and set script_path to a .lua file. The runner executes the file on ready, then calls optional global _ready() and _process(delta) functions. The same native Lua runtime is compiled into editor and export templates when the lua module is enabled.</description>
+  <tutorials />
+  <methods>
+    <method name="get_runtime">
+      <return type="LuaRuntime" />
+      <description>Returns the LuaRuntime used by this runner.</description>
+    </method>
+    <method name="get_script_path">
+      <return type="String" />
+      <description>Returns the .lua file executed by this runner.</description>
+    </method>
+    <method name="set_script_path">
+      <return type="void" />
+      <param index="0" name="path" type="String" />
+      <description>Sets the .lua script path, typically res://scripts/player.lua.</description>
+    </method>
+  </methods>
+  <members>
+    <member name="script_path" type="String" setter="set_script_path" getter="get_script_path" default="&quot;res://main.lua&quot;">
+      Lua source file executed when the node enters the scene tree.
+    </member>
+  </members>
+</class>

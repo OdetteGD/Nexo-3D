@@ -1,0 +1,52 @@
+name: Lua validation
+
+on:
+  push:
+    paths:
+      - "modules/lua/**"
+      - "thirdparty/lua/**"
+      - ".github/workflows/lua-validation.yml"
+  pull_request:
+    paths:
+      - "modules/lua/**"
+      - "thirdparty/lua/**"
+      - ".github/workflows/lua-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lua-syntax:
+    name: Lua syntax validation
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Lua 5.4
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes lua5.4
+
+      - name: Validate Lua example and valid fixture
+        run: |
+          luac5.4 -p modules/lua/examples/hello.lua
+          luac5.4 -p modules/lua/examples/main.lua
+          luac5.4 -p modules/lua/examples/control_3d_scene.lua
+          luac5.4 -p modules/lua/tests/valid.lua
+
+      - name: Ensure invalid fixture is rejected
+        shell: bash
+        run: |
+          if luac5.4 -p modules/lua/tests/invalid.lua 2>lua-error.log; then
+            echo "ERROR: invalid Lua fixture unexpectedly passed"
+            exit 1
+          fi
+          cat lua-error.log
+          grep -E 'syntax error|near' lua-error.log
+
+      - name: Build and smoke-test vendored Lua 5.4.8
+        run: |
+          cc -std=c99 -DLUA_USE_LINUX -Ithirdparty/lua thirdparty/lua/*.c modules/lua/tests/runtime_smoke.c -lm -ldl -o lua-runtime-smoke
+          ./lua-runtime-smoke
