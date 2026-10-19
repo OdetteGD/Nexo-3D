@@ -43,9 +43,9 @@ public:
 	ScriptLanguage *get_language() const override;
 	bool has_script_signal(const StringName &p_signal) const override { return false; }
 	void get_script_signal_list(List<MethodInfo> *r_signals) const override {}
-	bool get_property_default_value(const StringName &p_property, Variant &r_value) const override { return false; }
+	bool get_property_default_value(const StringName &p_property, Variant &r_value) const override;
 	void get_script_method_list(List<MethodInfo> *r_list) const override;
-	void get_script_property_list(List<PropertyInfo> *r_list) const override {}
+	void get_script_property_list(List<PropertyInfo> *r_list) const override;
 	const Variant get_rpc_config() const override { return Dictionary(); }
 
 #ifdef TOOLS_ENABLED
@@ -114,13 +114,10 @@ class LuaScriptInstance : public ScriptInstance {
 	bool loaded = false;
 
 public:
-	bool set(const StringName &p_name, const Variant &p_value) override { return false; }
-	bool get(const StringName &p_name, Variant &r_ret) const override { return false; }
-	void get_property_list(List<PropertyInfo> *r_properties) const override {}
-	Variant::Type get_property_type(const StringName &p_name, bool *r_is_valid = nullptr) const override {
-		if (r_is_valid) *r_is_valid = false;
-		return Variant::NIL;
-	}
+	bool set(const StringName &p_name, const Variant &p_value) override;
+	bool get(const StringName &p_name, Variant &r_ret) const override;
+	void get_property_list(List<PropertyInfo> *r_properties) const override;
+	Variant::Type get_property_type(const StringName &p_name, bool *r_is_valid = nullptr) const override;
 	void validate_property(PropertyInfo &p_property) const override {}
 	bool property_can_revert(const StringName &p_name) const override { return false; }
 	bool property_get_revert(const StringName &p_name, Variant &r_ret) const override { return false; }
