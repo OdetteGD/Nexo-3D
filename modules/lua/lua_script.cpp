@@ -46,25 +46,76 @@ ScriptInstance *LuaScript::instance_create(Object *p_this) {
 }
 
 bool LuaScript::has_method(const StringName &p_method) const {
-	return p_method == SNAME("_ready") || p_method == SNAME("_process") ||
+	if (p_method == SNAME("_ready") || p_method == SNAME("_process") ||
 			p_method == SNAME("_enter_tree") || p_method == SNAME("_exit_tree") ||
 			p_method == SNAME("_physics_process") || p_method == SNAME("_input") ||
-			p_method == SNAME("_unhandled_input") || p_method == SNAME("_notification");
+			p_method == SNAME("_unhandled_input") || p_method == SNAME("_notification")) {
+		return true;
+	}
+	const String declaration = "function " + String(p_method) + "(";
+	const String local_declaration = "local function " + String(p_method) + "(";
+	return source_code.contains(declaration) || source_code.contains(local_declaration);
 }
 
 MethodInfo LuaScript::get_method_info(const StringName &p_method) const {
 	MethodInfo info;
 	info.name = p_method;
-	if (p_method == SNAME("_process") || p_method == SNAME("_physics_process")) {
-		info.arguments.push_back(PropertyInfo(Variant::FLOAT, "delta"));
+	const String declaration = "function " + String(p_method) + "(";
+	int start = source_code.find(declaration);
+	if (start < 0) {
+		if (p_method == SNAME("_process") || p_method == SNAME("_physics_process")) {
+			info.arguments.push_back(PropertyInfo(Variant::FLOAT, "delta"));
+		}
+		return info;
+	}
+	start += declaration.length();
+	const int end = source_code.find(")", start);
+	if (end >= start) {
+		PackedStringArray args = source_code.substr(start, end - start).split(",");
+		for (int i = 0; i < args.size(); i++) {
+			String arg = args[i].strip_edges();
+			if (!arg.is_empty() && arg != "...") {
+				info.arguments.push_back(PropertyInfo(Variant::NIL, arg));
+			}
+		}
 	}
 	return info;
 }
 
 void LuaScript::get_script_method_list(List<MethodInfo> *r_list) const {
-	static const char *callbacks[] = { "_enter_tree", "_ready", "_process", "_physics_process", "_input", "_unhandled_input", "_exit_tree" };
+	HashSet<StringName> added;
+	const PackedStringArray lines = source_code.split("\n");
+	for (int i = 0; i < lines.size(); i++) {
+		String line = lines[i].strip_edges();
+		String declaration;
+		if (line.begins_with("function ")) {
+			declaration = line.substr(String("function ").length());
+		} else if (line.begins_with("local function ")) {
+			declaration = line.substr(String("local function ").length());
+		}
+		if (declaration.is_empty()) {
+			continue;
+		}
+		const int paren = declaration.find("(");
+		if (paren <= 0) {
+			continue;
+		}
+		const String name = declaration.substr(0, paren).strip_edges();
+		if (name.contains(".") || name.contains(":")) {
+			continue;
+		}
+		const StringName method_name(name);
+		if (!added.has(method_name)) {
+			r_list->push_back(get_method_info(method_name));
+			added.insert(method_name);
+		}
+	}
+	static const char *callbacks[] = { "_enter_tree", "_ready", "_process", "_physics_process", "_input", "_unhandled_input", "_exit_tree", "_notification" };
 	for (const char *callback : callbacks) {
-		r_list->push_back(get_method_info(StringName(callback)));
+		const StringName method_name(callback);
+		if (!added.has(method_name)) {
+			r_list->push_back(get_method_info(method_name));
+		}
 	}
 }
 
