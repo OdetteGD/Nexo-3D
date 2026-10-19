@@ -10,6 +10,47 @@
 
 LuaScriptLanguage *LuaScriptLanguage::singleton = nullptr;
 
+static Array _lua_export_declarations(const String &p_source) {
+	Array exports;
+	const PackedStringArray lines = p_source.split("\n");
+	for (int i = 0; i < lines.size(); i++) {
+		String line = lines[i].strip_edges();
+		if (!line.begins_with("-- @export ")) continue;
+		line = line.substr(String("-- @export ").length()).strip_edges();
+		const int equal = line.find("=");
+		String left = equal >= 0 ? line.substr(0, equal).strip_edges() : line;
+		String initial = equal >= 0 ? line.substr(equal + 1).strip_edges() : String();
+		const int colon = left.find(":");
+		if (colon <= 0) continue;
+		String name = left.substr(0, colon).strip_edges();
+		String type_name = left.substr(colon + 1).strip_edges();
+		if (name.is_empty() || name.contains(" ") || name.contains(".") || name.contains(":")) continue;
+		Variant::Type type = Variant::NIL;
+		if (type_name == "int") type = Variant::INT;
+		else if (type_name == "float" || type_name == "number") type = Variant::FLOAT;
+		else if (type_name == "bool" || type_name == "boolean") type = Variant::BOOL;
+		else if (type_name == "string") type = Variant::STRING;
+		else if (type_name == "Vector2") type = Variant::VECTOR2;
+		else if (type_name == "Vector3") type = Variant::VECTOR3;
+		else continue;
+		Variant default_value;
+		if (type == Variant::INT) default_value = initial.is_empty() ? Variant(0) : Variant((int64_t)initial.to_int());
+		else if (type == Variant::FLOAT) default_value = initial.is_empty() ? Variant(0.0) : Variant(initial.to_float());
+		else if (type == Variant::BOOL) default_value = initial == "true";
+		else if (type == Variant::STRING) {
+			if (initial.length() >= 2 && ((initial.begins_with("\"") && initial.ends_with("\"")) || (initial.begins_with("'") && initial.ends_with("'")))) initial = initial.substr(1, initial.length() - 2);
+			default_value = initial;
+		} else if (type == Variant::VECTOR2) default_value = Vector2();
+		else if (type == Variant::VECTOR3) default_value = Vector3();
+		Dictionary item;
+		item["name"] = name;
+		item["type"] = (int)type;
+		item["default"] = default_value;
+		exports.push_back(item);
+	}
+	return exports;
+}
+
 LuaScript::LuaScript() {
 	source_code = "-- Lua script attached directly to a Node.\n\nfunction _ready()\n    Nexo.log(\"Lua script ready\")\nend\n\nfunction _process(delta)\nend\n";
 	reload();
