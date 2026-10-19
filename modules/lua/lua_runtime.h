@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  lua_runtime.h                                                               */
+/*  lua_runtime.h                                                         */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -30,9 +30,9 @@
 
 #pragma once
 
+#include "core/object/object_id.h"
 #include "core/object/ref_counted.h"
 #include "core/variant/dictionary.h"
-#include "core/object/object_id.h"
 
 extern "C" {
 #include "lua.h"
