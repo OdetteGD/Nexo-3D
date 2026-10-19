@@ -305,6 +305,7 @@ Dictionary LuaRuntime::check_syntax(const String &p_source, const String &p_sour
 }
 
 Dictionary LuaRuntime::execute_string(const String &p_source, const String &p_source_name) {
+	last_source_name = p_source_name;
 	Dictionary syntax = check_syntax(p_source, p_source_name);
 	if (!bool(syntax["ok"])) {
 		return syntax;
@@ -375,7 +376,7 @@ Dictionary LuaRuntime::call_function(const String &p_name, double p_delta, bool 
 	lua_sethook(state, nullptr, 0, 0);
 	if (status != LUA_OK) {
 		const String error = _stack_error(state);
-		const int line = _line_from_error(error, String("res://") + function_name);
+		const int line = _line_from_error(error, last_source_name);
 		ERR_PRINT(vformat("Lua callback '%s' failed: %s", p_name, error));
 		lua_settop(state, 0);
 		return _result(false, error, line, "runtime");
