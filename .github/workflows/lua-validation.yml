@@ -32,6 +32,8 @@ jobs:
       - name: Validate Lua example and valid fixture
         run: |
           luac5.4 -p modules/lua/examples/hello.lua
+          luac5.4 -p modules/lua/examples/main.lua
+          luac5.4 -p modules/lua/examples/control_3d_scene.lua
           luac5.4 -p modules/lua/tests/valid.lua
 
       - name: Ensure invalid fixture is rejected
