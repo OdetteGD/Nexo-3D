@@ -587,7 +587,14 @@ static void _push_variant_to_lua(lua_State *p_state, const Variant &p_value) {
 			lua_pushstring(p_state, object->get_class().utf8().get_data());
 			lua_setfield(p_state, -2, "class_name");
 			static const char *safe_fields[] = { "pressed", "keycode", "physical_keycode", "unicode", "position", "global_position", "relative", "button_index", "shift_pressed", "ctrl_pressed", "alt_pressed", "meta_pressed", "echo", "double_click" };
+			List<PropertyInfo> properties;
+			object->get_property_list(&properties);
 			for (const char *field : safe_fields) {
+				bool exists = false;
+				for (const PropertyInfo &property : properties) {
+					if (property.name == StringName(field)) { exists = true; break; }
+				}
+				if (!exists) continue;
 				Variant field_value = object->get(StringName(field));
 				if (field_value.get_type() == Variant::NIL) continue;
 				lua_pushstring(p_state, field);
