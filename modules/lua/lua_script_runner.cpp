@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  lua_script_runner.cpp                                                       */
+/*  lua_script_runner.cpp                                                 */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -30,8 +30,8 @@
 
 #include "lua_script_runner.h"
 
-#include "core/object/class_db.h"
 #include "core/error/error_macros.h"
+#include "core/object/class_db.h"
 
 void LuaScriptRunner::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_script_path", "path"), &LuaScriptRunner::set_script_path);
