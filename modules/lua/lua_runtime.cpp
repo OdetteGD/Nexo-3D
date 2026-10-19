@@ -374,6 +374,67 @@ Dictionary LuaRuntime::execute_file(const String &p_path) {
 	return execute_string(file->get_as_text(), p_path);
 }
 
+static Variant _lua_to_variant(lua_State *p_state, int p_index, int p_depth = 0) {
+	if (p_depth > 16) return Variant();
+	const int type = lua_type(p_state, p_index);
+	switch (type) {
+		case LUA_TNIL: return Variant();
+		case LUA_TBOOLEAN: return Variant((bool)(lua_toboolean(p_state, p_index) != 0));
+		case LUA_TNUMBER:
+			if (lua_isinteger(p_state, p_index)) return Variant((int64_t)lua_tointeger(p_state, p_index));
+			return Variant((double)lua_tonumber(p_state, p_index));
+		case LUA_TSTRING: {
+			size_t length = 0;
+			const char *value = lua_tolstring(p_state, p_index, &length);
+			return Variant(String::utf8(value, (int)length));
+		}
+		case LUA_TTABLE: {
+			const int absolute = lua_absindex(p_state, p_index);
+			lua_getfield(p_state, absolute, "x");
+			const bool has_x = !lua_isnil(p_state, -1);
+			const double x = lua_tonumber(p_state, -1);
+			lua_pop(p_state, 1);
+			lua_getfield(p_state, absolute, "y");
+			const bool has_y = !lua_isnil(p_state, -1);
+			const double y = lua_tonumber(p_state, -1);
+			lua_pop(p_state, 1);
+			lua_getfield(p_state, absolute, "z");
+			const bool has_z = !lua_isnil(p_state, -1);
+			const double z = lua_tonumber(p_state, -1);
+			lua_pop(p_state, 1);
+			if (has_x && has_y && has_z) return Variant(Vector3((real_t)x, (real_t)y, (real_t)z));
+			if (has_x && has_y && lua_gettop(p_state) >= 0) return Variant(Vector2((real_t)x, (real_t)y));
+			Array array;
+			Dictionary dictionary;
+			bool is_array = true;
+			int count = 0;
+			lua_pushnil(p_state);
+			while (lua_next(p_state, absolute) != 0) {
+				count++;
+				if (!lua_isinteger(p_state, -2) || lua_tointeger(p_state, -2) < 1) is_array = false;
+				lua_pop(p_state, 1);
+			}
+			if (is_array) {
+				for (int i = 1; i <= count; i++) {
+					lua_rawgeti(p_state, absolute, i);
+					array.push_back(_lua_to_variant(p_state, -1, p_depth + 1));
+					lua_pop(p_state, 1);
+				}
+				return Variant(array);
+			}
+			lua_pushnil(p_state);
+			while (lua_next(p_state, absolute) != 0) {
+				Variant key = _lua_to_variant(p_state, -2, p_depth + 1);
+				Variant value = _lua_to_variant(p_state, -1, p_depth + 1);
+				if (key.get_type() != Variant::NIL) dictionary[key] = value;
+				lua_pop(p_state, 1);
+			}
+			return Variant(dictionary);
+		}
+		default: return Variant();
+	}
+}
+
 static void _push_variant_to_lua(lua_State *p_state, const Variant &p_value) {
 	switch (p_value.get_type()) {
 		case Variant::NIL:
@@ -433,7 +494,7 @@ Dictionary LuaRuntime::call_function_args(const String &p_name, const Array &p_a
 	}
 	remaining_instructions = instruction_budget;
 	lua_sethook(state, _instruction_hook, LUA_MASKCOUNT, LUA_HOOK_GRANULARITY);
-	const int status = lua_pcall(state, p_args.size(), 0, 0);
+	const int status = lua_pcall(state, p_args.size(), 1, 0);
 	lua_sethook(state, nullptr, 0, 0);
 	if (status != LUA_OK) {
 		const String error = _stack_error(state);
@@ -442,8 +503,11 @@ Dictionary LuaRuntime::call_function_args(const String &p_name, const Array &p_a
 		lua_settop(state, 0);
 		return _result(false, error, line, "runtime");
 	}
+	Variant returned_value = _lua_to_variant(state, -1);
 	lua_settop(state, 0);
-	return _result(true);
+	Dictionary result = _result(true);
+	result["value"] = returned_value;
+	return result;
 }
 
 Dictionary LuaRuntime::call_function(const String &p_name, double p_delta, bool p_pass_delta) {
