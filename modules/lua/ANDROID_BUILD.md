@@ -19,3 +19,10 @@ This CI workflow verifies that the Lua module is present and compiles it as part
 ## Validation limits
 
 The workflow is a compile/build gate. It does not claim runtime validation on a physical Android device, APK installation, or successful execution of a Lua-driven scene. Add device/emulator smoke tests and an exported sample project before treating those behaviors as verified.
+
+
+## Native Lua scripts
+
+The module now registers `LuaScriptLanguage` with `ScriptServer`, plus a `.lua` resource loader and saver. This enables a tools-enabled editor to offer Lua alongside GDScript when creating scripts, and lets `.lua` files load as `LuaScript` resources. The initial runtime bridge supports Node lifecycle callbacks and the restricted `Nexo` API.
+
+The Android workflow currently checks for the new ScriptLanguage/resource integration sources and compiles Android release templates only. A green Android build is required before treating this change as build-verified; the workflow artifact is an engine template, not an APK. Script inheritance, exported Lua properties, custom signals, and full debugger/editor semantic support remain follow-up work.
