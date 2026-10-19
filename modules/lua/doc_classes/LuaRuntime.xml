@@ -2,6 +2,7 @@
 <class name="LuaRuntime" inherits="RefCounted">
   <brief_description>Embedded Lua 5.4 runtime with restricted engine bindings.</brief_description>
   <description>Each instance owns a separate Lua state, supports syntax checking and protected execution, and exposes a small Nexo API. Bind a Node with set_target_node before using node or scene operations.</description>
+  <tutorials />
   <methods>
     <method name="check_syntax"><return type="Dictionary" /><param index="0" name="source" type="String" /><param index="1" name="source_name" type="String" /><description>Compile source without executing it. Returns ok, error, line, and kind fields.</description></method>
     <method name="check_file"><return type="Dictionary" /><param index="0" name="path" type="String" /><description>Read and compile a Lua file without executing it.</description></method>
