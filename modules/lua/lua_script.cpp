@@ -1,12 +1,39 @@
 /**************************************************************************/
 /*  lua_script.cpp                                                        */
 /**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
+
 #include "lua_script.h"
 
 #include "core/error/error_macros.h"
+#include "core/io/resource_loader.h"
 #include "core/object/class_db.h"
 #include "core/object/object.h"
-#include "core/io/resource_loader.h"
 #include "scene/main/node.h"
 
 LuaScriptLanguage *LuaScriptLanguage::singleton = nullptr;
@@ -16,17 +43,27 @@ static Array _lua_signal_declarations(const String &p_source) {
 	const PackedStringArray lines = p_source.split("\n");
 	for (int i = 0; i < lines.size(); i++) {
 		String line = lines[i].strip_edges();
-		if (!line.begins_with("-- @signal ")) continue;
+		if (!line.begins_with("-- @signal ")) {
+			continue;
+		}
 		String declaration = line.substr(String("-- @signal ").length()).strip_edges();
 		const int paren = declaration.find("(");
-		if (paren <= 0 || !declaration.ends_with(")")) continue;
+		if (paren <= 0 || !declaration.ends_with(")")) {
+			continue;
+		}
 		String name = declaration.substr(0, paren).strip_edges();
-		if (name.contains(" ") || name.contains(".") || name.contains(":")) continue;
+		if (name.contains(" ") || name.contains(".") || name.contains(":")) {
+			continue;
+		}
 		bool duplicate = false;
 		for (int j = 0; j < signals.size(); j++) {
-			if (String(signals[j]).begins_with(name + "(")) duplicate = true;
+			if (String(signals[j]).begins_with(name + "(")) {
+				duplicate = true;
+			}
 		}
-		if (!duplicate) signals.push_back(declaration);
+		if (!duplicate) {
+			signals.push_back(declaration);
+		}
 	}
 	return signals;
 }
@@ -36,33 +73,55 @@ static Array _lua_export_declarations(const String &p_source) {
 	const PackedStringArray lines = p_source.split("\n");
 	for (int i = 0; i < lines.size(); i++) {
 		String line = lines[i].strip_edges();
-		if (!line.begins_with("-- @export ")) continue;
+		if (!line.begins_with("-- @export ")) {
+			continue;
+		}
 		line = line.substr(String("-- @export ").length()).strip_edges();
 		const int equal = line.find("=");
 		String left = equal >= 0 ? line.substr(0, equal).strip_edges() : line;
 		String initial = equal >= 0 ? line.substr(equal + 1).strip_edges() : String();
 		const int colon = left.find(":");
-		if (colon <= 0) continue;
+		if (colon <= 0) {
+			continue;
+		}
 		String name = left.substr(0, colon).strip_edges();
 		String type_name = left.substr(colon + 1).strip_edges();
-		if (name.is_empty() || name.contains(" ") || name.contains(".") || name.contains(":")) continue;
+		if (name.is_empty() || name.contains(" ") || name.contains(".") || name.contains(":")) {
+			continue;
+		}
 		Variant::Type type = Variant::NIL;
-		if (type_name == "int") type = Variant::INT;
-		else if (type_name == "float" || type_name == "number") type = Variant::FLOAT;
-		else if (type_name == "bool" || type_name == "boolean") type = Variant::BOOL;
-		else if (type_name == "string") type = Variant::STRING;
-		else if (type_name == "Vector2") type = Variant::VECTOR2;
-		else if (type_name == "Vector3") type = Variant::VECTOR3;
-		else continue;
+		if (type_name == "int") {
+			type = Variant::INT;
+		} else if (type_name == "float" || type_name == "number") {
+			type = Variant::FLOAT;
+		} else if (type_name == "bool" || type_name == "boolean") {
+			type = Variant::BOOL;
+		} else if (type_name == "string") {
+			type = Variant::STRING;
+		} else if (type_name == "Vector2") {
+			type = Variant::VECTOR2;
+		} else if (type_name == "Vector3") {
+			type = Variant::VECTOR3;
+		} else {
+			continue;
+		}
 		Variant default_value;
-		if (type == Variant::INT) default_value = initial.is_empty() ? Variant(0) : Variant((int64_t)initial.to_int());
-		else if (type == Variant::FLOAT) default_value = initial.is_empty() ? Variant(0.0) : Variant(initial.to_float());
-		else if (type == Variant::BOOL) default_value = initial == "true";
-		else if (type == Variant::STRING) {
-			if (initial.length() >= 2 && ((initial.begins_with("\"") && initial.ends_with("\"")) || (initial.begins_with("'") && initial.ends_with("'")))) initial = initial.substr(1, initial.length() - 2);
+		if (type == Variant::INT) {
+			default_value = initial.is_empty() ? Variant(0) : Variant((int64_t)initial.to_int());
+		} else if (type == Variant::FLOAT) {
+			default_value = initial.is_empty() ? Variant(0.0) : Variant(initial.to_float());
+		} else if (type == Variant::BOOL) {
+			default_value = initial == "true";
+		} else if (type == Variant::STRING) {
+			if (initial.length() >= 2 && ((initial.begins_with("\"") && initial.ends_with("\"")) || (initial.begins_with("'") && initial.ends_with("'")))) {
+				initial = initial.substr(1, initial.length() - 2);
+			}
 			default_value = initial;
-		} else if (type == Variant::VECTOR2) default_value = Vector2();
-		else if (type == Variant::VECTOR3) default_value = Vector3();
+		} else if (type == Variant::VECTOR2) {
+			default_value = Vector2();
+		} else if (type == Variant::VECTOR3) {
+			default_value = Vector3();
+		}
 		Dictionary item;
 		item["name"] = name;
 		item["type"] = (int)type;
@@ -87,20 +146,30 @@ Ref<Script> LuaScript::get_base_script() const {
 	const PackedStringArray lines = source_code.split("\n");
 	for (int i = 0; i < lines.size(); i++) {
 		String line = lines[i].strip_edges();
-		if (!line.begins_with("-- @extends ")) continue;
+		if (!line.begins_with("-- @extends ")) {
+			continue;
+		}
 		String path = line.substr(String("-- @extends ").length()).strip_edges();
-		if (path.is_empty()) return Ref<Script>();
+		if (path.is_empty()) {
+			return Ref<Script>();
+		}
 		Ref<LuaScript> base = ResourceLoader::load(path, "LuaScript");
-		if (base.is_valid() && base.ptr() != this && base->is_script_valid()) return base;
+		if (base.is_valid() && base.ptr() != this && base->is_script_valid()) {
+			return base;
+		}
 		return Ref<Script>();
 	}
 	return Ref<Script>();
 }
 
 bool LuaScript::inherits_script(const Ref<Script> &p_script) const {
-	if (p_script.ptr() == this) return true;
+	if (p_script.ptr() == this) {
+		return true;
+	}
 	Ref<Script> base = get_base_script();
-	if (base.is_null() || base.ptr() == this) return false;
+	if (base.is_null() || base.ptr() == this) {
+		return false;
+	}
 	return base->inherits_script(p_script);
 }
 
@@ -206,7 +275,9 @@ bool LuaScript::has_script_signal(const StringName &p_signal) const {
 	Array signals = _lua_signal_declarations(source_code);
 	for (int i = 0; i < signals.size(); i++) {
 		String declaration = signals[i];
-		if (declaration.begins_with(String(p_signal) + "(")) return true;
+		if (declaration.begins_with(String(p_signal) + "(")) {
+			return true;
+		}
 	}
 	return false;
 }
@@ -227,13 +298,22 @@ void LuaScript::get_script_signal_list(List<MethodInfo> *r_signals) const {
 				String arg_name = colon >= 0 ? arg.substr(0, colon).strip_edges() : arg;
 				String type_name = colon >= 0 ? arg.substr(colon + 1).strip_edges() : String();
 				Variant::Type type = Variant::NIL;
-				if (type_name == "int") type = Variant::INT;
-				else if (type_name == "float" || type_name == "number") type = Variant::FLOAT;
-				else if (type_name == "bool") type = Variant::BOOL;
-				else if (type_name == "string") type = Variant::STRING;
-				else if (type_name == "Vector2") type = Variant::VECTOR2;
-				else if (type_name == "Vector3") type = Variant::VECTOR3;
-				if (!arg_name.is_empty()) info.arguments.push_back(PropertyInfo(type, arg_name));
+				if (type_name == "int") {
+					type = Variant::INT;
+				} else if (type_name == "float" || type_name == "number") {
+					type = Variant::FLOAT;
+				} else if (type_name == "bool") {
+					type = Variant::BOOL;
+				} else if (type_name == "string") {
+					type = Variant::STRING;
+				} else if (type_name == "Vector2") {
+					type = Variant::VECTOR2;
+				} else if (type_name == "Vector3") {
+					type = Variant::VECTOR3;
+				}
+				if (!arg_name.is_empty()) {
+					info.arguments.push_back(PropertyInfo(type, arg_name));
+				}
 			}
 		}
 		r_signals->push_back(info);
@@ -272,7 +352,9 @@ LuaScriptLanguage::LuaScriptLanguage() {
 }
 
 LuaScriptLanguage::~LuaScriptLanguage() {
-	if (singleton == this) singleton = nullptr;
+	if (singleton == this) {
+		singleton = nullptr;
+	}
 }
 
 Vector<String> LuaScriptLanguage::get_reserved_words() const {
@@ -308,7 +390,9 @@ Ref<Script> LuaScriptLanguage::make_template(const String &p_template, const Str
 String LuaScriptLanguage::make_function(const String &p_class, const String &p_name, const PackedStringArray &p_args) const {
 	String args;
 	for (int i = 0; i < p_args.size(); i++) {
-		if (i > 0) args += ", ";
+		if (i > 0) {
+			args += ", ";
+		}
 		args += p_args[i];
 	}
 	return "\nfunction " + p_name + "(" + args + ")\n    -- TODO\nend\n";
@@ -346,7 +430,9 @@ LuaScriptInstance::LuaScriptInstance(LuaScript *p_script, Object *p_owner) {
 }
 
 bool LuaScriptInstance::set(const StringName &p_name, const Variant &p_value) {
-	if (!loaded || runtime.is_null() || script.is_null()) return false;
+	if (!loaded || runtime.is_null() || script.is_null()) {
+		return false;
+	}
 	Array exports = _lua_export_declarations(script->get_source_code());
 	for (int i = 0; i < exports.size(); i++) {
 		Dictionary item = exports[i];
@@ -373,7 +459,9 @@ bool LuaScriptInstance::get(const StringName &p_name, Variant &r_ret) const {
 }
 
 void LuaScriptInstance::get_property_list(List<PropertyInfo> *r_properties) const {
-	if (script.is_valid()) script->get_script_property_list(r_properties);
+	if (script.is_valid()) {
+		script->get_script_property_list(r_properties);
+	}
 }
 
 Variant::Type LuaScriptInstance::get_property_type(const StringName &p_name, bool *r_is_valid) const {
@@ -401,10 +489,14 @@ bool LuaScriptInstance::has_method(const StringName &p_method) const {
 
 int LuaScriptInstance::get_method_argument_count(const StringName &p_method, bool *r_is_valid) const {
 	if (script.is_null() || !script->has_method(p_method)) {
-		if (r_is_valid) *r_is_valid = false;
+		if (r_is_valid) {
+			*r_is_valid = false;
+		}
 		return 0;
 	}
-	if (r_is_valid) *r_is_valid = true;
+	if (r_is_valid) {
+		*r_is_valid = true;
+	}
 	return script->get_method_info(p_method).arguments.size();
 }
 
@@ -428,7 +520,9 @@ Variant LuaScriptInstance::callp(const StringName &p_method, const Variant **p_a
 
 void LuaScriptInstance::notification(int p_notification, bool p_reversed) {
 	(void)p_reversed;
-	if (!loaded || !runtime.is_valid()) return;
+	if (!loaded || !runtime.is_valid()) {
+		return;
+	}
 	Node *node = Object::cast_to<Node>(owner);
 	if (p_notification == Node::NOTIFICATION_READY) {
 		runtime->call_function("_ready");
